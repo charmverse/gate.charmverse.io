@@ -2,10 +2,10 @@ import { Card, CardActions, CardContent, CircularProgress, Divider, FormHelperTe
 import Head from 'next/head';
 import Typography from '@mui/material/Typography';
 import { ethers } from 'ethers';
-import { GetServerSidePropsContext } from 'next';
 import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '../../components/Button';
+import LoadingComponent from '../../components/LoadingComponent';
 import Copyright from '../../components/Copyright';
 import PrimaryButton from '../../components/PrimaryButton';
 import NotionSpaceIcon from '../../components/NotionSpaceIcon';
@@ -18,12 +18,8 @@ import SwapHorizIcon from '@mui/icons-material/ArrowRightAlt';
 import { PageSection } from '../../layouts/Page';
 import styled from '@emotion/styled';
 import { useLoadingState } from '../../lib/react';
-import { getSpaceByDomain } from '../../lib/notion';
 import { POST, GET } from '../../lib/http';
-import logger from '../../lib/logger';
 import debounce from '../../lib/debounce';
-import prisma from '../../lib/prisma';
-import { NotionGate } from '.prisma/client';
 import WalletConnectButton from '../../components/WalletConnectButton';
 import BlockchainLogo from '../../components/BlockchainLogo';
 import { getCookie, setCookie } from '../../lib/browser';
@@ -31,43 +27,6 @@ import { getCookie, setCookie } from '../../lib/browser';
 import { TokenAccessCriteria } from '../settings';
 import { blockchains } from '../../lib/blockchain';
 import { blueColor } from '../../theme/colors';
-
-interface ServerResponse {
-  gate: NotionGate;
-}
-
-export const getServerSideProps = async ({ query, ...context }: GetServerSidePropsContext) => {
-
-  const domain = query.domain as string;
-
-  const notionGate = await prisma.notionGate.findFirst({
-    where: {
-      spaceDomain: domain,
-    }
-  });
-
-  if (!notionGate) {
-    logger.warn('space not found in db', { domain });
-    return {
-      notFound: true,
-    };
-  }
-
-  const space = await getSpaceByDomain(domain);
-
-  if (!space) {
-    logger.warn('space found in db but not connected', { domain });
-    return {
-      notFound: true,
-    };
-  }
-
-  return {
-    props: {
-      gate: notionGate
-    }
-  };
-};
 
 const Logo = styled.img`
   border-radius: 50%;
@@ -89,16 +48,27 @@ const LockContainer = styled.div`
 
 const EMAIL_COOKIE = 'notion_email';
 
-export default function TokenGate ({ gate }: ServerResponse) {
+export default function TokenGate () {
 
   const emailFromCookie = getCookie(EMAIL_COOKIE);
-  const { spaceDomain, spaceName, spaceIcon } = gate;
   const [saving, setSaving] = useState(false);
   const [accountAddress, setAccountAddress] = useState<string | null>(null);
   const [accountChainId, setAccountChainId] = useState<number | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
   const [walletState, setWalletState] = useLoadingState<{ address?: string, approved: boolean, connected: boolean, signature?: string, error: string }>({ approved: false, connected: false, loading: false, error: '' });
   const [emailState, setEmailState] = useLoadingState<{ valid?: boolean, email?: string, notionUserId?: string }>({ email: emailFromCookie, loading: false });
+  const [gate, setGate] = useLoadingState<{ data: any | null }>({ data: null });
+
+  const { spaceDomain, spaceName, spaceIcon } = (gate.data || {});
+
+  useEffect(() => {
+    GET<{ gate: any }>('/api/gate').then(({ gate }) => {
+      setGate({ data: gate, loading: false });
+    }).catch(error => {
+      console.error(error);
+      setGate({ error, loading: false });
+    });
+  }, []);
 
   useEffect(() => {
     if (accountAddress && accountChainId) {
@@ -173,7 +143,11 @@ export default function TokenGate ({ gate }: ServerResponse) {
   }
 
   const workspaceUrl = `https://notion.so/${spaceDomain}`;
-  const notionLandingPage = gate.spaceDefaultUrl || workspaceUrl;
+  const notionLandingPage = gate.data.spaceDefaultUrl || workspaceUrl;
+
+  if (!gate.data) {
+    return <LoadingComponent isLoading={true} />;
+  }
 
   return (
     <>
@@ -183,7 +157,7 @@ export default function TokenGate ({ gate }: ServerResponse) {
       <Box sx={{ background: 'white', py: 5 }}>
         <Box pb={3}  display='flex' alignItems='center' justifyContent='center'>
           <LockContainer style={{ border: '1px solid #ccc', marginRight: '.5em' }}>
-            <BlockchainLogo chainId={gate.tokenChainId} width={36} />
+            <BlockchainLogo chainId={gate.data.tokenChainId} width={36} />
           </LockContainer>
           <SwapHorizIcon sx={{ color: '#aaa' }} />
           <LockContainer style={{ background: blueColor, color: 'white', height: '48px', width: '48px', margin: '0 .5em' }}>
@@ -203,7 +177,7 @@ export default function TokenGate ({ gate }: ServerResponse) {
           </Typography>
           <br />
           <Typography gutterBottom variant='h2' sx={{ fontSize: 14, color: 'rgba(0, 0, 0, 0.6)' }}>Access Criteria</Typography>
-          <TokenAccessCriteria {...gate} />
+          <TokenAccessCriteria {...gate.data} />
         </Box>
         <Card sx={{ width: '100%', boxShadow: 3 }}>
           <CardContent sx={{ p: 4 }}>
@@ -238,7 +212,7 @@ export default function TokenGate ({ gate }: ServerResponse) {
               />
               {(emailState.notionUserId || walletState.address) && <>
                 <Typography gutterBottom variant='h2' sx={{ fontSize: 18, my: 2 }}>Step 2. Connect to a wallet</Typography>
-                <WalletConnectButton email={emailState.email} userId={emailState.notionUserId} gateChainId={gate.tokenChainId} connect={connectWallet} walletState={walletState} />
+                <WalletConnectButton email={emailState.email} userId={emailState.notionUserId} gateChainId={gate.data.tokenChainId} connect={connectWallet} walletState={walletState} />
               </>}
             </Box>
           </CardContent>

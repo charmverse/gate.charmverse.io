@@ -2,7 +2,7 @@
 import Typography from '@mui/material/Typography';
 import { buttonUnstyledClasses, Card, CardContent, CircularProgress, Divider, FormControlLabel, FormHelperText, FormLabel, Grid, IconButton, Radio, RadioGroup, SelectChangeEvent } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { NotionGate } from '.prisma/client';
+import { NotionGate } from '../api';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import Box from '@mui/material/Box';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -30,7 +30,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import { useFormState, useLoadingState } from '../lib/react';
 import { POST, GET, DELETE } from '../lib/http';
 import Page, { PageSection } from '../layouts/Page';
-import type { Settings } from './api/settings';
 import BlockchainLogo from '../components/BlockchainLogo';
 import { blockchains, getContractUrl } from '../lib/blockchain';
 import styled from '@emotion/styled';
@@ -47,6 +46,26 @@ interface Space {
   id: string;
   isAdmin: boolean;
   name: string;
+}
+
+// copied from internal api
+interface Settings {
+  createdAt?: string;
+  spaceIsAdmin?: boolean;
+  spaceIsConnected?: boolean;
+  spaceBlockIds: string[];
+  spaceBlockUrls: string[];
+  spaceDefaultUrl?: string;
+  spaceDomain: string;
+  spaceName: string;
+  spaceIcon: string;
+  spaceId: string;
+  tokenAddress: string;
+  tokenChainId: number;
+  tokenName: string;
+  tokenSymbol: string;
+  tokenMin: number
+  tokenType: string;
 }
 
 interface Form extends Settings {
