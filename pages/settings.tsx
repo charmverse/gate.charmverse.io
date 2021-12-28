@@ -28,7 +28,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import CheckIcon from '@mui/icons-material/Check';
 import EditIcon from '@mui/icons-material/Edit';
 import { useFormState, useLoadingState } from '../lib/react';
-import { POST, GET, DELETE } from '../lib/http.browser';
+import { POST, GET, DELETE } from '../lib/http';
 import Page, { PageSection } from '../layouts/Page';
 import type { Settings } from './api/settings';
 import BlockchainLogo from '../components/BlockchainLogo';

@@ -19,7 +19,7 @@ import { PageSection } from '../../layouts/Page';
 import styled from '@emotion/styled';
 import { useLoadingState } from '../../lib/react';
 import { getSpaceByDomain } from '../../lib/notion';
-import { POST, GET } from '../../lib/http.browser';
+import { POST, GET } from '../../lib/http';
 import logger from '../../lib/logger';
 import debounce from '../../lib/debounce';
 import prisma from '../../lib/prisma';

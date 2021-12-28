@@ -17,16 +17,6 @@ const config = {
       test: /\.svg$/,
       use: ['@svgr/webpack']
     });
-    if (isServer) {
-      const entry = config.entry;
-      config.entry = () => {
-        return entry().then((entry) => ({
-          ...entry,
-          // adding custom entry points
-          worker: path.resolve(process.cwd(), 'worker/poll.ts')
-        }));
-      }
-    }
     return config;
   }
 }

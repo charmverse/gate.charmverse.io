@@ -22,7 +22,8 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "jsxImportSource": "@emotion/react",
-    "allowJs": true
+    "allowJs": true,
+    "incremental": true
   },
   "exclude": [
     "node_modules",

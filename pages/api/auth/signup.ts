@@ -1,6 +1,5 @@
 import { handleLogin } from '@auth0/nextjs-auth0';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { sendUserEvent } from '../../../lib/tracking';
 
 export default async function signup (req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -13,7 +12,6 @@ export default async function signup (req: NextApiRequest, res: NextApiResponse)
         returnTo: req.query.returnTo
       }
     });
-    await sendUserEvent({ event: 'signup' });
   } catch (error) {
     res.status((<any> error).status || 400).end((<any> error).message);
   }
