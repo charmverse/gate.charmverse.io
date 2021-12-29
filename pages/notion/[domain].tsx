@@ -62,7 +62,7 @@ export default function TokenGate () {
   const { spaceDomain, spaceName, spaceIcon } = (gate.data || {});
 
   useEffect(() => {
-    GET<{ gate: any }>('/api/gate').then(({ gate }) => {
+    GET<{ gate: any }>('/gate').then(({ gate }) => {
       setGate({ data: gate, loading: false });
     }).catch(error => {
       console.error(error);
@@ -73,7 +73,7 @@ export default function TokenGate () {
   useEffect(() => {
     if (accountAddress && accountChainId) {
       setWalletState({ address: accountAddress, loading: true, approved: false, connected: false, error: '' });
-      GET<{ approved: boolean, connected: boolean, error?: string }>('/api/notion/connect', {
+      GET<{ approved: boolean, connected: boolean, error?: string }>('/notion/connect', {
         address: accountAddress,
         chainId: accountChainId,
         domain: spaceDomain
@@ -108,7 +108,7 @@ export default function TokenGate () {
       return;
     }
     setEmailState({ loading: true });
-    GET<{ userId: string }>('/api/notion/userByEmail', { email })
+    GET<{ userId: string }>('/notion/userByEmail', { email })
       .then(({ userId }) => {
         if (userId) {
           setEmailState({ loading: false, email, valid: true, notionUserId: userId });
@@ -125,7 +125,7 @@ export default function TokenGate () {
   function saveConnection () {
     if (emailState.notionUserId) {
       setSaving(true);
-      POST('/api/notion/connect', {
+      POST('/notion/connect', {
         address: accountAddress,
         domain: spaceDomain,
         email: emailState.email,

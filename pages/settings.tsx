@@ -95,7 +95,7 @@ export default function SettingsPage () {
   const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
-    GET<Settings | null>('/api/settings')
+    GET<Settings | null>('/settings')
       .then(res => {
         if (res) {
           setForm({ loading: false, step: 0, ...res });
@@ -107,7 +107,7 @@ export default function SettingsPage () {
   }, []);
 
   useEffect(() => {
-    GET<User[]>('/api/notion/getUsers')
+    GET<User[]>('/notion/getUsers')
       .then(_users => {
         setUsers(_users);
       });
@@ -115,7 +115,7 @@ export default function SettingsPage () {
 
   useEffect(() => {
     if (form.step !== -1) {
-      GET('/api/track/page_view', {
+      GET('/track/page_view', {
         title: FORM_STEP_TITLES[form.step]
       });
     }
@@ -124,7 +124,7 @@ export default function SettingsPage () {
 
   function saveSettings (settings: Omit<Settings, 'tokenName' | 'tokenSymbol'>) {
     setForm({ saving: true });
-    POST<Settings>('/api/settings', settings)
+    POST<Settings>('/settings', settings)
       .then(settings => {
         setForm({ ...settings, saving: false, step: 0 });
       })
@@ -143,7 +143,7 @@ export default function SettingsPage () {
 
   function deleteSettings () {
     if (form.spaceDomain) {
-      DELETE('/api/settings', { domain: form.spaceDomain })
+      DELETE('/settings', { domain: form.spaceDomain })
         .then(() => {
           setForm({ saving: false, spaceDomain: '', step: 1 });
         });
@@ -412,7 +412,7 @@ function NotionValidateForm ({ form, goBack, onSubmit }: { form: Settings, goBac
 
   function getSpaceByDomain () {
     setSpace({ error: '', loading: true });
-    GET<Space>('/api/notion/spaceByDomain', { domain: form.spaceDomain })
+    GET<Space>('/notion/spaceByDomain', { domain: form.spaceDomain })
       .then(space => {
         if (space) {
           setSpace({ error: '', loading: false, value: { spaceIcon: space.icon, spaceIsAdmin: space.isAdmin, spaceName: space.name, spaceDomain: space.domain, spaceId: space.id} });
@@ -588,7 +588,7 @@ function NotionPreferencesForm ({ form, goBack, onSubmit }: { form: Settings, go
   }
 
   // useEffect(() => {
-  //   GET('/api/notion/getPages', { domain: form.spaceDomain }).then(res => {
+  //   GET('/notion/getPages', { domain: form.spaceDomain }).then(res => {
   //     setPages(pages);
   //   });
   // })

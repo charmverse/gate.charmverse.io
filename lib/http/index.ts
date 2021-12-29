@@ -2,7 +2,7 @@ import fetch from './fetch';
 
 type Params = { [key: string]: any };
 
-export function GET<T> (requestURL: string, data: Params = {}): Promise<T> {
+export function GET<T> (requestURL: string, data: Params = {}, { headers = {} }: { headers?: any } = {}): Promise<T> {
   const queryStr = Object.keys(data)
     .filter(key => !!data[key])
     .map(key => `${key}=${encodeURIComponent(data[key])}`)
@@ -12,14 +12,15 @@ export function GET<T> (requestURL: string, data: Params = {}): Promise<T> {
     {
       method: 'GET',
       headers: new Headers({
-        Accept: 'application/json'
+        Accept: 'application/json',
+        ...headers
       }),
       credentials: 'include'
     }
   );
 }
 
-export function DELETE<T> (requestURL: string, data: Params = {}): Promise<T> {
+export function DELETE<T> (requestURL: string, data: Params = {}, { headers = {} }: { headers?: any } = {}): Promise<T> {
   return fetch(
     requestURL,
     {
@@ -27,7 +28,8 @@ export function DELETE<T> (requestURL: string, data: Params = {}): Promise<T> {
       method: 'DELETE',
       headers: new Headers({
         Accept: 'application/json',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...headers
       }),
       credentials: 'include'
     }
@@ -50,7 +52,7 @@ export function POST<T> (requestURL: string, data: Params = {}, { headers = {}, 
   );
 }
 
-export function PUT<T> (requestURL: string, data: Params = {}): Promise<T> {
+export function PUT<T> (requestURL: string, data: Params = {}, { headers = {} }: { headers?: any } = {}): Promise<T> {
   return fetch(
     requestURL,
     {
@@ -58,29 +60,9 @@ export function PUT<T> (requestURL: string, data: Params = {}): Promise<T> {
       method: 'PUT',
       headers: new Headers({
         Accept: 'application/json',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...headers
       }),
-      credentials: 'include'
-    }
-  );
-}
-
-export function uploadFile (requestURL: string, file: File): Promise<any> {
-
-  const formData = new FormData();
-
-  // Update the formData object
-  formData.append(
-    'upload',
-    file,
-    file.name
-  );
-
-  return fetch(
-    requestURL,
-    {
-      body: formData,
-      method: 'POST',
       credentials: 'include'
     }
   );

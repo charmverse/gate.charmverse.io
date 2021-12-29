@@ -2,7 +2,7 @@
 const _fetch = (resource: string, init?: any) => {
   const api =
     !resource.startsWith('http') && !resource.startsWith('/api')
-      ? process.env.NEXT_PUBLIC_API
+      ? process.env.NEXT_PUBLIC_API//'/api/proxy'//process.env.NEXT_PUBLIC_API
       : '';
   return fetch(`${api}${resource}`, init).then(transformResponse);
 }
