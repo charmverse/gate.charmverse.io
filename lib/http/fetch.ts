@@ -2,7 +2,7 @@
 const _fetch = (resource: string, init?: any) => {
   const api =
     !resource.startsWith('http') && !resource.startsWith('/api')
-      ? process.env.NEXT_PUBLIC_API//'/api/proxy'//process.env.NEXT_PUBLIC_API
+      ? process.env.NEXT_PUBLIC_API
       : '';
   return fetch(`${api}${resource}`, init).then(transformResponse);
 }
@@ -15,7 +15,7 @@ function transformResponse (response: Response) {
       return response.json().then(json => Promise.reject(json));
     }
     // Note: 401 if user is logged out
-    return response.text().then(text => Promise.reject({ status: response.status, error: text }));
+    return response.text().then(text => Promise.reject({ status: response.status, message: text }));
   }
   const contentType = response.headers.get('content-type');
   if (contentType?.includes('application/json')) {

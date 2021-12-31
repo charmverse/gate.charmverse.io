@@ -1,7 +1,6 @@
 import { Card, CardActions, CardContent, CircularProgress, Divider, FormHelperText, Grid } from '@mui/material';
 import Head from 'next/head';
 import Typography from '@mui/material/Typography';
-import { ethers } from 'ethers';
 import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '../../components/Button';
@@ -27,6 +26,7 @@ import { getCookie, setCookie } from '../../lib/browser';
 import { TokenAccessCriteria } from '../settings';
 import { blockchains } from '../../lib/blockchain';
 import { blueColor } from '../../theme/colors';
+import { useRouter } from 'next/router';
 
 const Logo = styled.img`
   border-radius: 50%;
@@ -48,8 +48,29 @@ const LockContainer = styled.div`
 
 const EMAIL_COOKIE = 'notion_email';
 
+// TODO: figure out why this doesnt work
+// export const getServerSideProps = async ({ query }) => {
+//   const { domain } = query;
+//   console.log("get domain!", domain);
+//   const { gate } = await GET(`/gate`, { domain });
+
+//   if (!gate) {
+//     console.warn('space not found in db', { domain });
+//     return {
+//       notFound: true
+//     };
+//   }
+
+//   return {
+//     props: {
+//       gate
+//     }
+//   };
+// }
+
 export default function TokenGate () {
 
+  const { query } = useRouter();
   const emailFromCookie = getCookie(EMAIL_COOKIE);
   const [saving, setSaving] = useState(false);
   const [accountAddress, setAccountAddress] = useState<string | null>(null);
@@ -62,11 +83,11 @@ export default function TokenGate () {
   const { spaceDomain, spaceName, spaceIcon } = (gate.data || {});
 
   useEffect(() => {
-    GET<{ gate: any }>('/gate').then(({ gate }) => {
+    GET<{ gate: any }>('/gate', { domain: query.domain }).then(({ gate }) => {
       setGate({ data: gate, loading: false });
     }).catch(error => {
-      console.error(error);
-      setGate({ error, loading: false });
+      console.error('Error requesting token gate', error);
+      window.location.href = '/404';
     });
   }, []);
 
@@ -142,13 +163,13 @@ export default function TokenGate () {
     }
   }
 
-  const workspaceUrl = `https://notion.so/${spaceDomain}`;
-  const notionLandingPage = gate.data.spaceDefaultUrl || workspaceUrl;
-
   if (!gate.data) {
-    return <LoadingComponent isLoading={true} />;
+    return <LoadingComponent height={'600px'} isLoading={true} />;
   }
 
+  const workspaceUrl = `https://notion.so/${spaceDomain}`;
+  const notionLandingPage = gate.data.spaceDefaultUrl || workspaceUrl;
+  console.log('gate ', gate);
   return (
     <>
       <Head>

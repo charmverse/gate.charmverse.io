@@ -128,8 +128,8 @@ export default function SettingsPage () {
       .then(settings => {
         setForm({ ...settings, saving: false, step: 0 });
       })
-      .catch(({ error }) => {
-        setForm({ error, saving: false });
+      .catch(({ message }) => {
+        setForm({ error: message, saving: false });
       });
   }
 
@@ -244,7 +244,7 @@ export default function SettingsPage () {
 function SettingsDisplay ({ settings, editSettings, deleteSettings }: { settings: Settings, editSettings: () => void, deleteSettings: () => void }) {
 
   const notionUrl = 'https://notion.so/' + settings.spaceDomain;
-  const shareUrl = 'https://gate.charmverse.io/notion/' + settings.spaceDomain;
+  const shareUrl = process.env.NEXT_PUBLIC_HOSTNAME + '/notion/' + settings.spaceDomain;
   const [tooltipIsOpen, setTooltipIsOpen] = useState(false);
 
   function alertCopied () {
@@ -421,8 +421,8 @@ function NotionValidateForm ({ form, goBack, onSubmit }: { form: Settings, goBac
           setSpace({ error: '', loading: false, value: null });
         }
       })
-      .catch(({ error }) => {
-        setSpace({ error, loading: false, value: null });
+      .catch(({ message }: { message: string }) => {
+        setSpace({ error: message, loading: false, value: null });
       });
   }
 
@@ -597,7 +597,7 @@ function NotionPreferencesForm ({ form, goBack, onSubmit }: { form: Settings, go
   return (<>
     <CardContent sx={{ px: 4, py: 2 }}>
     <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Step 3 of 4:</Typography>
-      <Typography  variant='h2' sx={{ fontSize: 18 }}>Configure Notion options</Typography>
+      <Typography variant='h2' sx={{ fontSize: 18 }}>Configure Notion options</Typography>
     </CardContent>
     <Divider />
     <CardContent sx={{ p: 4 }}>
