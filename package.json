@@ -3,7 +3,7 @@
     "build": "next build",
     "build:analyze": "ANALYZE=true next build",
     "start": "next dev",
-    "start:production": "node_modules/next/dist/bin/next start"
+    "start:prod": "node_modules/next/dist/bin/next start"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^1.6.2",
