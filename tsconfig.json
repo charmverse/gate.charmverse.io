@@ -1,0 +1,36 @@
+{
+  "ts-node": {
+    "compilerOptions": {
+      "jsx": "react"
+    }
+  },
+  "compilerOptions": {
+    "strict": true,
+    "target": "es5",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "jsxImportSource": "@emotion/react",
+    "allowJs": true,
+    "incremental": true
+  },
+  "exclude": [
+    "node_modules",
+    "next-env.d.ts"
+  ],
+  "include": [
+    "next-env-custom.d.ts",
+    "**/*.ts"
+  ]
+}
