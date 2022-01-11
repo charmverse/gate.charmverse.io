@@ -23,7 +23,7 @@ import WalletConnectButton from '../../components/WalletConnectButton';
 import BlockchainLogo from '../../components/BlockchainLogo';
 import { getCookie, setCookie } from '../../lib/browser';
 
-import { TokenAccessCriteria } from '../settings';
+import TokenAccessCriteria from '../../components/TokenAccessCriteria';
 import { blockchains } from '../../lib/blockchain';
 import { blueColor } from '../../theme/colors';
 import { useRouter } from 'next/router';
@@ -47,26 +47,6 @@ const LockContainer = styled.div`
 `;
 
 const EMAIL_COOKIE = 'notion_email';
-
-// TODO: figure out why this doesnt work
-// export const getServerSideProps = async ({ query }) => {
-//   const { domain } = query;
-//   console.log("get domain!", domain);
-//   const { gate } = await GET(`/gate`, { domain });
-
-//   if (!gate) {
-//     console.warn('space not found in db', { domain });
-//     return {
-//       notFound: true
-//     };
-//   }
-
-//   return {
-//     props: {
-//       gate
-//     }
-//   };
-// }
 
 export default function TokenGate () {
 
