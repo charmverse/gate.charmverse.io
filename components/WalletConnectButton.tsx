@@ -1,16 +1,13 @@
 
 import { useEffect, useState } from 'react';
-import { Card, CardActions, CardContent, CircularProgress, Divider, FormHelperText, Grid } from '@mui/material';
+import { CircularProgress, FormHelperText } from '@mui/material';
 import detectEthereumProvider from '@metamask/detect-provider';
 import LoadingIcon from '@mui/material/CircularProgress';
-import { recoverTypedSignature_v4 as recoverTypedSignatureV4 } from 'eth-sig-util';
-import { Web3ReactProvider, useWeb3React, UnsupportedChainIdError } from '@web3-react/core';
 import Button from './Button';
 import Link from '@mui/material/Link';
 import Modal from '@mui/material/Modal';
 import Typography from '@mui/material/Typography';
 import CheckIcon from '@mui/icons-material/Check';
-import LoginIcon from '@mui/icons-material/Login';
 import CloseIcon from '@mui/icons-material/Close';
 import Box from '@mui/material/Box';
 import styled from '@emotion/styled';
@@ -72,12 +69,6 @@ export default function WalletConnectButton ({ email, userId, gateChainId, conne
       });
     }
     else {
-      // setWallet({
-      //   address: connector.accounts[0],
-      //   chainId: connector.chainId,
-      //   signature: undefined
-      // });
-        console.log('requestSignature: init');
       const signature = await requestSignature(connector, { chainId: gateChainId, email, userId, from: connector.accounts[0] });
       if (signature) {
         setWallet({ address: connector.accounts[0], chainId: connector.chainId, signature });
@@ -95,7 +86,6 @@ export default function WalletConnectButton ({ email, userId, gateChainId, conne
       const { accounts, chainId } = payload.params[0];
       if (accounts[0]) {
         console.log('requestSignature: connector.on(connect');
-        //setWallet({ address: accounts[0], chainId, signature: undefined });
         const signature = await requestSignature(connector, { chainId: gateChainId, email, userId, from: accounts[0] });
         if (signature) {
           setWallet({ address: accounts[0], chainId, signature });
@@ -110,7 +100,6 @@ export default function WalletConnectButton ({ email, userId, gateChainId, conne
       setMetamaskError('');
       // Get updated accounts and chainId
       const { accounts, chainId } = payload.params[0];
-      //setWallet({ address: accounts[0], chainId, signature: undefined });
       const signature = await requestSignature(connector, { chainId: gateChainId, email, userId, from: accounts[0] });
       if (signature) {
         setWallet({ address: accounts[0], chainId, signature });
@@ -133,7 +122,6 @@ export default function WalletConnectButton ({ email, userId, gateChainId, conne
     metamask.provider.request({ method: 'eth_requestAccounts' })
       .then(async (accounts: string[]) => {
         closeModal();
-       // setWallet({ address: accounts[0], chainId: gateChainId, signature: undefined });
         const signature = await requestSignature(metamask.provider, { chainId: gateChainId, email, userId, from: accounts[0] });
         if (signature) {
           setWallet({
@@ -162,47 +150,14 @@ export default function WalletConnectButton ({ email, userId, gateChainId, conne
           });
 
           provider.on('accountsChanged', async (accounts: string[]) => {
-            // setWallet({
-            //   address: accounts[0],
-            //   chainId: parseInt(provider.chainId, 16),
-            //   signature: undefined
-            // });
             console.log('accountsChanged', accounts);
             if (accounts[0]) {
-              console.log('requestSignature: accountsChanged')
-              // const signature = await requestSignature(provider, { chainId: gateChainId, email, userId, from: accounts[0] });
-              // if (signature) {
-              //   setWallet({
-              //     address: accounts[0],
-              //     signature,
-              //     chainId: parseInt(provider.chainId, 16),
-              //   });
-              // }
+              console.log('requestSignature: accountsChanged');
             }
             else {
               setWallet({ address: '', chainId: undefined, signature: undefined });
             }
           });
-
-          // provider.request({ method: 'eth_accounts' })
-          //   .then(async (accounts: any[]) => {
-          //     const decimalChainId = parseInt(provider.chainId, 16);
-          //     if (accounts.length > 0) {
-          //       setWallet({
-          //         address: accounts[0],
-          //         chainId: parseInt(provider.chainId, 16),
-          //         signature: undefined
-          //       });
-          //       // const signature = await requestSignature(provider, { chainId: gateChainId, email, userId, from: accounts[0] });
-          //       // if (signature) {
-          //       //   setWallet({
-          //       //     address: accounts[0],
-          //       //     signature,
-          //       //     chainId: parseInt(provider.chainId, 16),
-          //       //   });
-          //       // }
-          //     }
-          //   });
         }
       });
   }, []);

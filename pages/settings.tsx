@@ -1,16 +1,12 @@
 
+import styled from '@emotion/styled';
+import { useEffect, useState } from 'react';
+import { CopyToClipboard } from 'react-copy-to-clipboard';
 import Typography from '@mui/material/Typography';
 import { buttonUnstyledClasses, Card, CardContent, CircularProgress, Divider, FormControlLabel, FormHelperText, FormLabel, Grid, IconButton, Radio, RadioGroup, SelectChangeEvent } from '@mui/material';
-import { useEffect, useState } from 'react';
-import { NotionGate } from '../api';
-import { CopyToClipboard } from 'react-copy-to-clipboard';
 import Box from '@mui/material/Box';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CopyIcon from '@mui/icons-material/ContentCopy';
-import Button from '../components/Button';
-import NotionSpaceIcon from '../components/NotionSpaceIcon';
-import TrimmedContent from '../components/TrimmedContent';
-import PrimaryButton from '../components/PrimaryButton';
 import Link from '@mui/material/Link';
 import Tooltip from '@mui/material/Tooltip';
 import TextField from '@mui/material/TextField';
@@ -30,9 +26,13 @@ import EditIcon from '@mui/icons-material/Edit';
 import { useFormState, useLoadingState } from '../lib/react';
 import { POST, GET, DELETE } from '../lib/http';
 import Page, { PageSection } from '../layouts/Page';
-import BlockchainLogo from '../components/BlockchainLogo';
-import { blockchains, getContractUrl } from '../lib/blockchain';
-import styled from '@emotion/styled';
+import { blockchains } from '../lib/blockchain';
+import debounce from '../lib/debounce';
+import Button from '../components/Button';
+import NotionSpaceIcon from '../components/NotionSpaceIcon';
+import TrimmedContent from '../components/TrimmedContent';
+import PrimaryButton from '../components/PrimaryButton';
+import TokenAccessCriteria from '../components/TokenAccessCriteria';
 
 
 const tokenTypes = [
@@ -122,7 +122,7 @@ export default function SettingsPage () {
   }, [form.step]);
 
 
-  function saveSettings (settings: Omit<Settings, 'tokenName' | 'tokenSymbol'>) {
+  function saveSettings (settings: Settings) {
     setForm({ saving: true });
     POST<Settings>('/settings', settings)
       .then(settings => {
@@ -154,7 +154,7 @@ export default function SettingsPage () {
     setForm({ ..._form, step: form.step + 1 });
   }
 
-  function saveToken (_form: Pick<Settings, 'tokenChainId' | 'tokenAddress' | 'tokenType' | 'tokenMin'>) {
+  function saveForm (_form: TokenFormSettings) {
     setForm(_form);
     saveSettings({
       spaceBlockIds: form.spaceBlockIds,
@@ -168,6 +168,8 @@ export default function SettingsPage () {
       tokenChainId: _form.tokenChainId,
       tokenMin: _form.tokenMin,
       tokenType: _form.tokenType,
+      tokenName: _form.tokenName,
+      tokenSymbol: _form.tokenSymbol,
     });
   }
 
@@ -198,7 +200,7 @@ export default function SettingsPage () {
             <NotionPreferencesForm form={form} goBack={goBack} onSubmit={updateFormAndContinue} />
           )}
           {form.step === 4 && (
-            <TokenForm form={form} goBack={goBack} onSubmit={saveToken} />
+            <TokenForm form={form} goBack={goBack} onSubmit={saveForm} />
           )}
         </Card>
         {form.step !== -1 && (
@@ -353,10 +355,6 @@ function NotionForm ({ form, goBack, onSubmit }: { form: Settings, goBack: () =>
       saveNotion();
     }
   }
-
-  // const onDomainChange = debounce(function (event: React.ChangeEvent<HTMLInputElement>) {
-  //   setSpaceId('');
-  // }, 300);
 
   return (<>
     <CardContent sx={{ px: 4, py: 2 }}>
@@ -675,19 +673,20 @@ function NotionPreferencesForm ({ form, goBack, onSubmit }: { form: Settings, go
   </>);
 }
 
-function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void, onSubmit: (form: Pick<Form, 'tokenChainId' | 'tokenAddress' | 'tokenType' | 'tokenMin'>) => void }) {
+type TokenFormSettings = Pick<Settings, 'tokenChainId' | 'tokenAddress' | 'tokenName' | 'tokenSymbol' | 'tokenType' | 'tokenMin'>;
+
+function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void, onSubmit: (form: TokenFormSettings) => void }) {
 
   const [values, setValues] = useFormState<Form>({
-    // @ts-ignore
+    tokenName: '',
+    tokenSymbol: '',
     tokenChainId: 1,
-    // @ts-ignore
     tokenMin: 1,
-    // @ts-ignore
     tokenType: 'ERC20',
     ...form
   });
 
-  function saveToken () {
+  function submitForm () {
     onSubmit({
       ...values,
       // @ts-ignore cast string value to number
@@ -699,8 +698,29 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
   function updateValues (e: any) {
     const name = e.target.name;
     const value = e.target.value;
-    setValues({ ...values, [name]: value });
+    setValues({ [name]: value });
+    if (name === 'tokenChainId' || name === 'tokenAddress' || name === 'tokenType') {
+      onContractChange({ ...values, [name]: value });
+    }
   }
+
+  const onContractChange = debounce(function (_values: TokenFormSettings) {
+    GET<{ tokenName: string, tokenSymbol: string }>('/blockchain/getContract', {
+      tokenAddress: _values.tokenAddress,
+      tokenChainId: _values.tokenChainId,
+      tokenType: _values.tokenType
+    }).then(res => {
+      const tokenName = res.tokenName || _values.tokenName;
+      const tokenSymbol = res.tokenSymbol || _values.tokenSymbol;
+      setValues({ tokenName, tokenSymbol, error: null });
+    }).catch(err => {
+      setValues({ error: 'Contract is not valid' });
+    });
+  }, 300);
+
+  useEffect(() => {
+    onContractChange(values);
+  }, []);
 
   return (<>
     <CardContent sx={{ px: 4, py: 2 }}>
@@ -750,6 +770,27 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
         </Select>
       </FormControl>
       <br /><br />
+      <FormLabel>Token name</FormLabel>
+      {values.tokenType === 'ERC721' ? (
+        <TextField
+          fullWidth
+          name='tokenName'
+          value={values.tokenName || ''}
+          onChange={updateValues}
+          required
+          size='small'
+        />
+      ) : (
+        <TextField
+          fullWidth
+          name='tokenSymbol'
+          value={values.tokenSymbol || ''}
+          onChange={updateValues}
+          required
+          size='small'
+        />
+      )}
+      <br /><br />
       <FormLabel>Minimum tokens in wallet</FormLabel>
       <TextField
         fullWidth
@@ -774,48 +815,13 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
         Back
       </Button>
       <PrimaryButton
-        disabled={!values.tokenAddress || !values.tokenType || !values.tokenChainId}
+        disabled={!values.tokenAddress || !values.tokenType || !values.tokenChainId || form.error}
         loading={form.saving}
-        variant='outlined' size='large' onClick={saveToken}>
+        variant='outlined' size='large' onClick={submitForm}>
         {form.createdAt ? 'Save' : 'Create'}
       </PrimaryButton>
     </CardContent>
   </>);
-}
-
-export function TokenAccessCriteria ({ tokenChainId, tokenAddress, tokenMin, tokenName, tokenType, tokenSymbol }: Pick<NotionGate, 'tokenChainId' | 'tokenAddress' | 'tokenType' | 'tokenMin' | 'tokenName' | 'tokenSymbol'>) {
-  const contractUrl = getContractUrl(tokenChainId, tokenAddress);
-  return (
-    <Box
-      sx={{
-        p: 3,
-        pl: 8,
-        mb: 2,
-        background: 'white',
-        borderRadius: 5,
-        textAlign: 'center',
-        border: '1px solid #ccc',
-        position: 'relative',
-        width: '100%',
-      }}
-    >
-      <Box sx={{
-        position: 'absolute', left: 0, top: 0,
-        height: '100%',
-        display: 'flex', justifyContent: 'center', alignItems: 'center',
-        width: 50,
-        background: '#fafafa',
-        borderRight: '1px solid #ccc', borderBottomLeftRadius: 20, borderTopLeftRadius: 20
-      }}>
-        <BlockchainLogo chainId={tokenChainId} />
-      </Box>
-
-      {tokenType === 'ERC721'
-        ? <span>Own at least <strong>{tokenMin} <Link href={contractUrl} target='_blank'>{tokenName}</Link> NFT</strong></span>
-        : <span>Hold at least <strong>{tokenMin} <Link href={contractUrl} target='_blank'>${tokenSymbol}</Link></strong></span>
-      }
-    </Box>
-  );
 }
 
 const shortenedContractAddresss = (address: string) => {
