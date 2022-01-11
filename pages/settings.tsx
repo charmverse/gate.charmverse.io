@@ -213,9 +213,9 @@ export default function SettingsPage () {
             Authorized Members <Chip size='small' label={authorizedMembers.length} />
           </Typography>
           <br />
-          <Grid container>
+          <Grid container columnSpacing={2} rowSpacing={3} justifyContent='flex-start'>
             {authorizedMembers.map(user => (
-              <Grid component={Box} item xs key={user.id} display='flex' alignItems='center' justifyContent='flex-start' flexDirection='column'>
+              <Grid component={Box} item key={user.id} sx={{ width: 80 }} display='flex' alignItems='center' justifyContent='flex-start' flexDirection='column'>
                 <Avatar src={user.icon} />
                 <Typography variant='body2' sx={{ my: 2 }}>
                   <strong>{shortenedContractAddresss(user.address)}</strong>
@@ -229,9 +229,9 @@ export default function SettingsPage () {
               Other Notion Users <Chip size='small' label={unauthorizedMembers.length} />
             </Typography>
             <br />
-            <Grid container>
-              {unauthorizedMembers.filter(user => !user.address).map(user => (
-                <Grid component={Box} item xs key={user.id} display='flex' alignItems='center' justifyContent='flex-start' flexDirection='column'>
+            <Grid container columnSpacing={2} rowSpacing={3} justifyContent='flex-start'>
+              {unauthorizedMembers.map(user => (
+                <Grid component={Box} item key={user.id} sx={{ width: 80 }} display='flex' alignItems='center' justifyContent='flex-start' flexDirection='column'>
                   <Avatar src={user.icon} />
                 </Grid>
               ))}
