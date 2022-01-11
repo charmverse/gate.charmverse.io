@@ -21,7 +21,6 @@ import Alert from '@mui/material/Alert';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import InputAdornment from '@mui/material/InputAdornment';
-import CheckIcon from '@mui/icons-material/Check';
 import EditIcon from '@mui/icons-material/Edit';
 import { useFormState, useLoadingState } from '../lib/react';
 import { POST, GET, DELETE } from '../lib/http';
@@ -33,6 +32,7 @@ import NotionSpaceIcon from '../components/NotionSpaceIcon';
 import TrimmedContent from '../components/TrimmedContent';
 import PrimaryButton from '../components/PrimaryButton';
 import TokenAccessCriteria from '../components/TokenAccessCriteria';
+import InputLoadingIcon from '../components/InputLoadingIcon';
 
 
 const tokenTypes = [
@@ -457,11 +457,7 @@ function NotionValidateForm ({ form, goBack, onSubmit }: { form: Settings, goBac
           sx={{
             pointerEvents: (space.loading || space.value) ? 'none' : 'auto'
           }}
-          endIcon={
-            space.loading ? <CircularProgress size={15} style={{ color: '#ccc' }} />
-            : space.value ? <CheckIcon color='success' />
-            : null
-          }
+          endIcon={<InputLoadingIcon loading={space.loading} isValid={!!space.value} />}
         >
           {space.loading ? 'Checking' : space.value ? `Connected${space.value.spaceIsAdmin ? '' : ' as guest'}` : space.error ? 'Check again' : 'Click to check'}
         </Button>
@@ -677,6 +673,7 @@ type TokenFormSettings = Pick<Settings, 'tokenChainId' | 'tokenAddress' | 'token
 
 function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void, onSubmit: (form: TokenFormSettings) => void }) {
 
+  const [isValidContract, setIsValidContract] = useLoadingState({ valid: false });
   const [values, setValues] = useFormState<Form>({
     tokenName: '',
     tokenSymbol: '',
@@ -705,6 +702,7 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
   }
 
   const onContractChange = debounce(function (_values: TokenFormSettings) {
+    setIsValidContract({ loading: true });
     GET<{ tokenName: string, tokenSymbol: string }>('/blockchain/getContract', {
       tokenAddress: _values.tokenAddress,
       tokenChainId: _values.tokenChainId,
@@ -713,8 +711,10 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
       const tokenName = res.tokenName || _values.tokenName;
       const tokenSymbol = res.tokenSymbol || _values.tokenSymbol;
       setValues({ tokenName, tokenSymbol, error: null });
+      setIsValidContract({ loading: false, valid: true });
     }).catch(err => {
-      setValues({ error: 'Contract is not valid' });
+      setValues({ error: 'Please enter a valid contract' });
+      setIsValidContract({ loading: false, valid: false });
     });
   }, 300);
 
@@ -752,6 +752,11 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
         required
         size='small'
         InputProps={{
+          endAdornment: (
+            <InputAdornment position='end'>
+              <InputLoadingIcon loading={isValidContract.loading} isValid={isValidContract.valid} />
+            </InputAdornment>
+          ),
           placeholder: '0x0000000000000000000000000000000000000000'
         }}
       />
@@ -805,9 +810,9 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
       />
     </CardContent>
     <Divider />
-    {form.error && (
+    {values.error && (
       <CardContent sx={{ px: 4, pt: 2, pb: 0 }}>
-        <Alert severity='error'>{form.error}</Alert>
+        <Alert severity='error'>{values.error}</Alert>
       </CardContent>
     )}
     <CardContent sx={{ px: 4, py: 2, display: 'flex', justifyContent: 'space-between' }}>
@@ -815,7 +820,7 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
         Back
       </Button>
       <PrimaryButton
-        disabled={!values.tokenAddress || !values.tokenType || !values.tokenChainId || form.error}
+        disabled={!values.tokenAddress || !values.tokenType || !values.tokenChainId || !!form.error}
         loading={form.saving}
         variant='outlined' size='large' onClick={submitForm}>
         {form.createdAt ? 'Save' : 'Create'}
