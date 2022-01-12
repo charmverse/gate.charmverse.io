@@ -13,6 +13,7 @@ export function getCookie (name: string): string {
 export function setCookie (name: string, value: string, expiresInDays: number = 10 * 365) {
   let expires = new Date();
   expires.setDate(expires.getDate() + expiresInDays);
-  const domainString = window.location.hostname === 'localhost' ? '' : 'domain=charmverse.io; ';
+  const domain = window.location.hostname.replace('gate.', ''); // strip out the subdomain
+  const domainString = window.location.hostname === 'localhost' ? '' : `domain=${domain}; `;
   document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires.toUTCString()}; ${domainString}path=/; SameSite=Lax; secure`;
 }

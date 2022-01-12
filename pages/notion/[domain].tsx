@@ -149,7 +149,7 @@ export default function TokenGate () {
 
   const workspaceUrl = `https://notion.so/${spaceDomain}`;
   const notionLandingPage = gate.data.spaceDefaultUrl || workspaceUrl;
-  console.log('gate ', gate);
+
   return (
     <>
       <Head>
