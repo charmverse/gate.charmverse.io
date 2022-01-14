@@ -4,6 +4,10 @@ const _fetch = (resource: string, init?: any) => {
     !resource.startsWith('http') && !resource.startsWith('/api')
       ? process.env.NEXT_PUBLIC_API
       : '';
+  // do not include credentials for cross-site requests (eg api.poap.xyz)
+  if (init && !api) {
+    delete init.credentials;
+  }
   return fetch(`${api}${resource}`, init).then(transformResponse);
 }
 

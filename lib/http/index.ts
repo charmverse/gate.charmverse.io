@@ -7,6 +7,7 @@ export function GET<T> (requestURL: string, data: Params = {}, { headers = {} }:
     .filter(key => !!data[key])
     .map(key => `${key}=${encodeURIComponent(data[key])}`)
     .join('&');
+
   return fetch(
     requestURL + (queryStr ? '?' + queryStr : ''),
     {

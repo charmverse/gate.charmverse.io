@@ -5,8 +5,8 @@ import POAPSelect from '../../components/POAPSelect';
 export default function () {
   const [value, setValue] = React.useState(19427);
 
-  function onChange (value: number) {
-    setValue(value);
+  function onChange ({ id }: { id: number, name: string }) {
+    setValue(id);
   }
   return (
     <Box padding={5}>

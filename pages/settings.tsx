@@ -33,7 +33,6 @@ import TrimmedContent from '../components/TrimmedContent';
 import PrimaryButton from '../components/PrimaryButton';
 import TokenAccessCriteria from '../components/TokenAccessCriteria';
 import InputLoadingIcon from '../components/InputLoadingIcon';
-import { getEvents, POAPEvent } from '../lib/blockchain/POAP';
 import POAPSelect from '../components/POAPSelect';
 
 
@@ -64,6 +63,7 @@ interface Settings {
   spaceIcon: string;
   spaceId: string;
   POAPEventId?: number;
+  POAPEventName?: string;
   tokenAddress: string;
   tokenChainId: number;
   tokenName: string;
@@ -162,6 +162,7 @@ export default function SettingsPage () {
     setForm(_form);
     saveSettings({
       POAPEventId: _form.POAPEventId,
+      POAPEventName: _form.POAPEventName,
       spaceBlockIds: form.spaceBlockIds,
       spaceBlockUrls: form.spaceBlockUrls,
       spaceDefaultUrl: form.spaceDefaultUrl,
@@ -674,7 +675,7 @@ function NotionPreferencesForm ({ form, goBack, onSubmit }: { form: Settings, go
   </>);
 }
 
-type TokenFormSettings = Pick<Settings, 'POAPEventId' | 'tokenChainId' | 'tokenAddress' | 'tokenName' | 'tokenSymbol' | 'tokenType' | 'tokenMin'>;
+type TokenFormSettings = Pick<Settings, 'POAPEventName' | 'POAPEventId' | 'tokenChainId' | 'tokenAddress' | 'tokenName' | 'tokenSymbol' | 'tokenType' | 'tokenMin'>;
 
 function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void, onSubmit: (form: TokenFormSettings) => void }) {
 
@@ -724,7 +725,9 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
   }, 300);
 
   useEffect(() => {
-    onContractChange(values);
+    if (values.tokenAddress) {
+      onContractChange(values);
+    }
   }, []);
 
   return (<>
@@ -821,7 +824,7 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
       {values.tokenType === 'POAP' && (<>
         <FormLabel>POAP</FormLabel>
         <FormControl sx={{ width: '100%' }}>
-          <POAPSelect value={values.POAPEventId} onChange={POAPEventId => setValues({ POAPEventId })} />
+          <POAPSelect value={values.POAPEventId} onChange={({ id, name }) => setValues({ POAPEventId: id, POAPEventName: name })} />
         </FormControl>
         </>)}
     </CardContent>
@@ -836,7 +839,7 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
         Back
       </Button>
       <PrimaryButton
-        disabled={!values.tokenAddress || !values.tokenType || !values.tokenChainId || !!form.error}
+        disabled={(values.tokenType === 'POAP' ? !values.POAPEventId : (!values.tokenAddress || !values.tokenType || !values.tokenChainId))}
         loading={form.saving}
         variant='outlined' size='large' onClick={submitForm}>
         {form.createdAt ? 'Save' : 'Create'}

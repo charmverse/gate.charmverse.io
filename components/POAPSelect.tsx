@@ -15,7 +15,7 @@ import Tooltip from '@mui/material/Tooltip';
 
 interface Props {
   value?: number;
-  onChange?: (value: number) => void;
+  onChange?: (value: { id: number, name: string }) => void;
 }
 
 const POAPSelect: FC<Props> = (props) => {
@@ -25,7 +25,6 @@ const POAPSelect: FC<Props> = (props) => {
 
   useEffect(() => {
     if (props.value !== undefined) {
-      console.log('parent set value', props.value);
       const event = POAPEvents.data.find(e => e.id === props.value);
       if (event) {
         setValue(event);
@@ -39,13 +38,20 @@ const POAPSelect: FC<Props> = (props) => {
         .map(e => ({ id: e.id, label: e.name }))
         .sort((a, b) => a.label.localeCompare(b.label));
       setPoapList({ data, loading: false });
+    })
+    .catch(error => {
+      setPoapList({ error, loading: false });
+      console.error(error);
     });
   }, []);
 
   function onChange (value: { id: number, label: string }) {
     setValue(value);
     if (props.onChange) {
-      props.onChange(value.id);
+      props.onChange({
+        id: value.id,
+        name: value.label
+      });
     }
   }
 
