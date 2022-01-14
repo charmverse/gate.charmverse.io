@@ -34,7 +34,7 @@ export default function TokenAccessCriteria ({ POAPEventName, tokenChainId, toke
 
       {tokenType === 'ERC721'
         ? <span>Own at least <strong>{tokenMin} <Link href={contractUrl} target='_blank'>{tokenName}</Link> NFT</strong></span>
-        : (tokenType === 'ERC721'
+        : (tokenType === 'ERC20'
           ? <span>Hold at least <strong>{tokenMin} <Link href={contractUrl} target='_blank'>${tokenSymbol}</Link></strong></span>
           : <span>Hold a <strong>{POAPEventName}</strong> POAP</span>)
       }
