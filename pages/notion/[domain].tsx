@@ -24,7 +24,7 @@ import BlockchainLogo from '../../components/BlockchainLogo';
 import { getCookie, setCookie } from '../../lib/browser';
 
 import TokenAccessCriteria from '../../components/TokenAccessCriteria';
-import { blockchains } from '../../lib/blockchain';
+import { SUPPORTED_BLOCKCHAINS } from '../../lib/blockchain';
 import { blueColor } from '../../theme/colors';
 import { useRouter } from 'next/router';
 
@@ -128,6 +128,7 @@ export default function TokenGate () {
       setSaving(true);
       POST('/notion/connect', {
         address: accountAddress,
+        chainId: accountChainId,
         domain: spaceDomain,
         email: emailState.email,
         notionUserId: emailState.notionUserId,
@@ -250,11 +251,3 @@ export default function TokenGate () {
     </>
   );
 }
-
-function getBlockChain (chainId: number) {
-  return blockchains.find(chain => chain.id === chainId)?.name;
-}
-
-const shortenedContractAddresss = (address: string) => {
-  return address.substring(0, 6) + '...' + address.substring(address.length - 4);
-};

@@ -25,7 +25,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import { useFormState, useLoadingState } from '../lib/react';
 import { POST, GET, DELETE } from '../lib/http';
 import Page, { PageSection } from '../layouts/Page';
-import { blockchains } from '../lib/blockchain';
+import { SUPPORTED_BLOCKCHAINS } from '../lib/blockchain';
 import debounce from '../lib/debounce';
 import Button from '../components/Button';
 import NotionSpaceIcon from '../components/NotionSpaceIcon';
@@ -33,11 +33,14 @@ import TrimmedContent from '../components/TrimmedContent';
 import PrimaryButton from '../components/PrimaryButton';
 import TokenAccessCriteria from '../components/TokenAccessCriteria';
 import InputLoadingIcon from '../components/InputLoadingIcon';
+import { getEvents, POAPEvent } from '../lib/blockchain/POAP';
+import POAPSelect from '../components/POAPSelect';
 
 
 const tokenTypes = [
   { id: 'ERC20', name: 'ERC-20' },
-  { id: 'ERC721', name: 'ERC-721' }
+  { id: 'ERC721', name: 'ERC-721' },
+  { id: 'POAP', name: 'POAP' }
 ];
 
 interface Space {
@@ -60,6 +63,7 @@ interface Settings {
   spaceName: string;
   spaceIcon: string;
   spaceId: string;
+  POAPEventId?: number;
   tokenAddress: string;
   tokenChainId: number;
   tokenName: string;
@@ -157,6 +161,7 @@ export default function SettingsPage () {
   function saveForm (_form: TokenFormSettings) {
     setForm(_form);
     saveSettings({
+      POAPEventId: _form.POAPEventId,
       spaceBlockIds: form.spaceBlockIds,
       spaceBlockUrls: form.spaceBlockUrls,
       spaceDefaultUrl: form.spaceDefaultUrl,
@@ -669,7 +674,7 @@ function NotionPreferencesForm ({ form, goBack, onSubmit }: { form: Settings, go
   </>);
 }
 
-type TokenFormSettings = Pick<Settings, 'tokenChainId' | 'tokenAddress' | 'tokenName' | 'tokenSymbol' | 'tokenType' | 'tokenMin'>;
+type TokenFormSettings = Pick<Settings, 'POAPEventId' | 'tokenChainId' | 'tokenAddress' | 'tokenName' | 'tokenSymbol' | 'tokenType' | 'tokenMin'>;
 
 function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void, onSubmit: (form: TokenFormSettings) => void }) {
 
@@ -729,38 +734,6 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
     </CardContent>
     <Divider />
     <CardContent sx={{ p: 4 }}>
-      <FormLabel>Blockchain</FormLabel>
-      <FormControl sx={{ width: '100%' }}>
-        <Select
-          size='small'
-          name='tokenChainId'
-          value={values.tokenChainId}
-          onChange={updateValues}
-        >
-          {blockchains.map(option => (
-            <MenuItem key={option.id} value={option.id}>{option.name}</MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      <br /><br />
-      <FormLabel>Token address</FormLabel>
-      <TextField
-        fullWidth
-        name='tokenAddress'
-        value={values.tokenAddress || ''}
-        onChange={updateValues}
-        required
-        size='small'
-        InputProps={{
-          endAdornment: (
-            <InputAdornment position='end'>
-              <InputLoadingIcon loading={isValidContract.loading} isValid={isValidContract.valid} />
-            </InputAdornment>
-          ),
-          placeholder: '0x0000000000000000000000000000000000000000'
-        }}
-      />
-      <br /><br />
       <FormLabel>Token type</FormLabel>
       <FormControl sx={{ width: '100%' }}>
         <Select
@@ -775,39 +748,82 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
         </Select>
       </FormControl>
       <br /><br />
-      <FormLabel>Token name</FormLabel>
-      {values.tokenType === 'ERC721' ? (
+
+      {values.tokenType !== 'POAP' && (<>
+        <FormLabel>Blockchain</FormLabel>
+        <FormControl sx={{ width: '100%' }}>
+          <Select
+            size='small'
+            name='tokenChainId'
+            value={values.tokenChainId}
+            onChange={updateValues}
+          >
+            {SUPPORTED_BLOCKCHAINS.map(option => (
+              <MenuItem key={option.id} value={option.id}>{option.name}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <br /><br />
+        <FormLabel>Token address</FormLabel>
         <TextField
           fullWidth
-          name='tokenName'
-          value={values.tokenName || ''}
+          name='tokenAddress'
+          value={values.tokenAddress || ''}
           onChange={updateValues}
           required
           size='small'
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position='end'>
+                <InputLoadingIcon loading={isValidContract.loading} isValid={isValidContract.valid} />
+              </InputAdornment>
+            ),
+            placeholder: '0x0000000000000000000000000000000000000000'
+          }}
         />
-      ) : (
-        <TextField
-          fullWidth
-          name='tokenSymbol'
-          value={values.tokenSymbol || ''}
-          onChange={updateValues}
-          required
-          size='small'
-        />
-      )}
-      <br /><br />
-      <FormLabel>Minimum tokens in wallet</FormLabel>
-      <TextField
-        fullWidth
-        name='tokenMin'
-        onChange={updateValues}
-        value={values.tokenMin}
-        size='small'
-        InputProps={{
-          type: 'number',
-          placeholder: '1'
-        }}
-      />
+        <br /><br />
+        <FormLabel>Token name</FormLabel>
+        {values.tokenType === 'ERC721' ? (
+          <TextField
+            fullWidth
+            name='tokenName'
+            value={values.tokenName || ''}
+            onChange={updateValues}
+            required
+            size='small'
+          />
+        ) : (
+          <TextField
+            fullWidth
+            name='tokenSymbol'
+            value={values.tokenSymbol || ''}
+            onChange={updateValues}
+            required
+            size='small'
+          />
+        )}
+        {values.tokenType === 'ERC20' && (<>
+          <br /><br />
+          <FormLabel>Minimum tokens in wallet</FormLabel>
+          <TextField
+            fullWidth
+            name='tokenMin'
+            onChange={updateValues}
+            value={values.tokenMin}
+            size='small'
+            InputProps={{
+              type: 'number',
+              placeholder: '1'
+            }}
+          />
+        </>)}
+      </>)}
+      {values.tokenType === 'POAP' && (<>
+        <FormLabel>POAP</FormLabel>
+        <FormControl sx={{ width: '100%' }}>
+          <POAPSelect value={values.POAPEventId} onChange={POAPEventId => setValues({ POAPEventId })} />
+        </FormControl>
+        </>)}
     </CardContent>
     <Divider />
     {values.error && (
