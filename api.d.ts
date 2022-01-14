@@ -18,4 +18,5 @@ export type NotionGate = {
   tokenType: string
   tokenMin: number
   userId: string
+  POAPEventName?: string
 }
