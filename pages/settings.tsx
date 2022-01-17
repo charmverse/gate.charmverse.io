@@ -160,6 +160,8 @@ export default function SettingsPage () {
 
   function saveForm (_form: TokenFormSettings) {
     setForm(_form);
+    alert('Site is under maintenance. Please try again later.');
+    return;
     saveSettings({
       POAPEventId: _form.POAPEventId,
       POAPEventName: _form.POAPEventName,
@@ -183,10 +185,9 @@ export default function SettingsPage () {
   const unauthorizedMembers = users.filter(user => !user.address);
 
   return (
-    <Page title={'Notion Token Gate Settings'}>
+    <Page title={'Notion Token Gate'}>
+      <Alert severity="warning">The site is under maintenance. Please try again later to update settings!</Alert>
       <PageSection sx={{ py: 6, minHeight: 700 }} width={600}>
-        <Typography variant='h1' align='center'>Your Notion Token Gate</Typography>
-        <br/><br/>
         <Card sx={{ width: '100%' }}>
           {form.step === -1 && (
             <CardContent sx={{ my: 10, display: 'flex', justifyContent: 'center' }}>
@@ -839,7 +840,8 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
         Back
       </Button>
       <PrimaryButton
-        disabled={(values.tokenType === 'POAP' ? !values.POAPEventId : (!values.tokenAddress || !values.tokenType || !values.tokenChainId))}
+        //disabled={(values.tokenType === 'POAP' ? !values.POAPEventId : (!values.tokenAddress || !values.tokenType || !values.tokenChainId))}
+        disabled={true}
         loading={form.saving}
         variant='outlined' size='large' onClick={submitForm}>
         {form.createdAt ? 'Save' : 'Create'}
