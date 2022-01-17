@@ -278,12 +278,12 @@ function SettingsDisplay ({ settings, editSettings, deleteSettings }: { settings
       </div>
       <div>
         <Tooltip arrow placement='top' title='Edit gate'>
-          <IconButton onClick={editSettings}>
+          <IconButton /* onClick={editSettings}*/>
             <EditIcon sx={{ color: '#aaa' }} />
           </IconButton>
         </Tooltip>
         <Tooltip arrow placement='top' title='Delete gate'>
-          <IconButton onClick={deleteLock}>
+          <IconButton /*onClick={deleteLock}*/>
             <DeleteIcon sx={{ color: '#aaa' }} />
           </IconButton>
         </Tooltip>
