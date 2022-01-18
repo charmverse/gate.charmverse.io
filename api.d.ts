@@ -34,6 +34,4 @@ export type NotionGateSettings = {
   // logical fields
   spaceIsAdmin: boolean
   spaceIsConnected: boolean
-  // deprecated
-  tokenType: LockType
 }

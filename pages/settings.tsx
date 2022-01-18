@@ -37,7 +37,7 @@ import POAPSelect from '../components/POAPSelect';
 import { LockType, NotionGateSettings } from '../api';
 
 
-const tokenTypes = [
+const lockTypes = [
   { id: 'ERC20', name: 'ERC-20' },
   { id: 'ERC721', name: 'ERC-721' },
   { id: 'POAP', name: 'POAP' }
@@ -790,11 +790,11 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
       <FormControl sx={{ width: '100%' }}>
         <Select
           size='small'
-          name='tokenType'
+          name='lockType'
           value={values.lockType}
           onChange={updateValues}
         >
-          {tokenTypes.map(option => (
+          {lockTypes.map(option => (
             <MenuItem key={option.id} value={option.id}>{option.name}</MenuItem>
           ))}
         </Select>
