@@ -210,6 +210,8 @@ export default function SettingsPage () {
 
   function saveForm (_form: TokenFormSettings) {
     setForm(_form);
+    alert('Site is under maintenance. Please try again later.');
+    return;
     saveSettings({
       lockId: form.lockId,
       addressWhitelist: form.addressWhitelist,
@@ -236,6 +238,10 @@ export default function SettingsPage () {
 
   return (
     <Page title={'Notion Token Gate'}>
+<<<<<<< HEAD
+=======
+      <Alert severity="warning" sx={{ justifyContent: 'center' }}>Sorry, the site is under maintenance. Please try again later to update settings!</Alert>
+>>>>>>> main
       <PageSection sx={{ py: 6, minHeight: 700 }} width={600}>
         <Card sx={{ width: '100%' }}>
           {form.step === -1 && (
@@ -326,16 +332,6 @@ function SettingsDisplay ({ settings, editSettings, deleteSettings }: { settings
         </Typography>
       </div>
       <div>
-        <Tooltip arrow placement='top' title='Edit gate'>
-          <IconButton onClick={editSettings}>
-            <EditIcon sx={{ color: '#aaa' }} />
-          </IconButton>
-        </Tooltip>
-        <Tooltip arrow placement='top' title='Delete gate'>
-          <IconButton onClick={deleteLock}>
-            <DeleteIcon sx={{ color: '#aaa' }} />
-          </IconButton>
-        </Tooltip>
       </div>
     </CardContent>
     <Divider />
