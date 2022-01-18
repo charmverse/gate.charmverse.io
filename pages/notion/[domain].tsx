@@ -1,4 +1,4 @@
-import { Card, CardActions, CardContent, CircularProgress, Divider, FormHelperText, Grid } from '@mui/material';
+import { Card, CardContent, CircularProgress, Divider } from '@mui/material';
 import Head from 'next/head';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
@@ -24,9 +24,9 @@ import BlockchainLogo from '../../components/BlockchainLogo';
 import { getCookie, setCookie } from '../../lib/browser';
 
 import TokenAccessCriteria from '../../components/TokenAccessCriteria';
-import { SUPPORTED_BLOCKCHAINS } from '../../lib/blockchain';
 import { blueColor } from '../../theme/colors';
 import { useRouter } from 'next/router';
+import { NotionGateLock } from '../../api';
 
 const Logo = styled.img`
   border-radius: 50%;
@@ -48,6 +48,14 @@ const LockContainer = styled.div`
 
 const EMAIL_COOKIE = 'notion_email';
 
+interface Gate {
+  spaceDomain: string;
+  spaceName: string;
+  spaceIcon?: string;
+  spaceDefaultUrl?: string;
+  locks: Pick<NotionGateLock, 'POAPEventName' | 'tokenChainId' | 'tokenAddress' | 'lockType' | 'tokenMin' | 'tokenName' | 'tokenSymbol'>[];
+}
+
 export default function TokenGate () {
 
   const { query } = useRouter();
@@ -58,7 +66,7 @@ export default function TokenGate () {
   const [signature, setSignature] = useState<string | null>(null);
   const [walletState, setWalletState] = useLoadingState<{ address?: string, approved: boolean, connected: boolean, signature?: string, error: string }>({ approved: false, connected: false, loading: false, error: '' });
   const [emailState, setEmailState] = useLoadingState<{ valid?: boolean, email?: string, notionUserId?: string }>({ email: emailFromCookie, loading: false });
-  const [gate, setGate] = useLoadingState<{ data: any | null }>({ data: null });
+  const [gate, setGate] = useLoadingState<{ data: Gate | null }>({ data: null });
 
   const { spaceDomain, spaceName, spaceIcon } = (gate.data || {});
 
@@ -159,7 +167,7 @@ export default function TokenGate () {
       <Box sx={{ background: 'white', py: 5 }}>
         <Box pb={3}  display='flex' alignItems='center' justifyContent='center'>
           <LockContainer style={{ border: '1px solid #ccc', marginRight: '.5em' }}>
-            <BlockchainLogo chainId={gate.data.tokenChainId} width={36} />
+            <BlockchainLogo chainId={gate.data.locks[0].tokenChainId} width={36} />
           </LockContainer>
           <SwapHorizIcon sx={{ color: '#aaa' }} />
           <LockContainer style={{ background: blueColor, color: 'white', height: '48px', width: '48px', margin: '0 .5em' }}>
@@ -179,7 +187,7 @@ export default function TokenGate () {
           </Typography>
           <br />
           <Typography gutterBottom variant='h2' sx={{ fontSize: 14, color: 'rgba(0, 0, 0, 0.6)' }}>Access Criteria</Typography>
-          <TokenAccessCriteria {...gate.data} />
+          <TokenAccessCriteria {...gate.data.locks[0]} />
         </Box>
         <Card sx={{ width: '100%', boxShadow: 3 }}>
           <CardContent sx={{ p: 4 }}>
@@ -214,7 +222,7 @@ export default function TokenGate () {
               />
               {(emailState.notionUserId || walletState.address) && <>
                 <Typography gutterBottom variant='h2' sx={{ fontSize: 18, my: 2 }}>Step 2. Connect to a wallet</Typography>
-                <WalletConnectButton email={emailState.email} userId={emailState.notionUserId} gateChainId={gate.data.tokenChainId} connect={connectWallet} walletState={walletState} />
+                <WalletConnectButton email={emailState.email} userId={emailState.notionUserId} gateChainId={gate.data.locks[0].tokenChainId} connect={connectWallet} walletState={walletState} />
               </>}
             </Box>
           </CardContent>

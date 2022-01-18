@@ -23,7 +23,7 @@ import Select from '@mui/material/Select';
 import InputAdornment from '@mui/material/InputAdornment';
 import EditIcon from '@mui/icons-material/Edit';
 import { useFormState, useLoadingState } from '../lib/react';
-import { POST, GET, DELETE } from '../lib/http';
+import { POST, GET, DELETE, PUT } from '../lib/http';
 import Page, { PageSection } from '../layouts/Page';
 import { SUPPORTED_BLOCKCHAINS } from '../lib/blockchain';
 import debounce from '../lib/debounce';
@@ -34,6 +34,7 @@ import PrimaryButton from '../components/PrimaryButton';
 import TokenAccessCriteria from '../components/TokenAccessCriteria';
 import InputLoadingIcon from '../components/InputLoadingIcon';
 import POAPSelect from '../components/POAPSelect';
+import { LockType, NotionGateSettings } from '../api';
 
 
 const tokenTypes = [
@@ -50,11 +51,12 @@ interface Space {
   name: string;
 }
 
-// copied from internal api
+// TODO: Delete this and rely on NotionGateSettings instead
 interface Settings {
   createdAt?: string;
+  lockId?: string;
+  addressWhitelist: string[];
   spaceIsAdmin?: boolean;
-  spaceIsConnected?: boolean;
   spaceBlockIds: string[];
   spaceBlockUrls: string[];
   spaceDefaultUrl?: string;
@@ -69,7 +71,7 @@ interface Settings {
   tokenName: string;
   tokenSymbol: string;
   tokenMin: number
-  tokenType: string;
+  lockType: LockType;
 }
 
 interface Form extends Settings {
@@ -99,10 +101,32 @@ export default function SettingsPage () {
   const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
-    GET<Settings | null>('/settings')
+    GET<NotionGateSettings | null>('/settings')
       .then(res => {
         if (res) {
-          setForm({ loading: false, step: 0, ...res });
+          const settings: Settings = {
+            createdAt: res.createdAt,
+            spaceIsAdmin: res.spaceIsAdmin,
+            spaceDomain: res.spaceDomain,
+            spaceName: res.spaceName,
+            spaceIcon: res.spaceIcon,
+            spaceId: res.spaceId,
+            // lock settings
+            lockId: res.locks[0].id,
+            lockType: res.locks[0].lockType,
+            addressWhitelist: res.locks[0].addressWhitelist,
+            spaceBlockIds: res.locks[0].spaceBlockIds,
+            spaceBlockUrls: res.locks[0].spaceBlockUrls,
+            spaceDefaultUrl: res.locks[0].spaceDefaultUrl,
+            POAPEventId: res.locks[0].POAPEventId,
+            POAPEventName: res.locks[0].POAPEventName,
+            tokenAddress: res.locks[0].tokenAddress,
+            tokenChainId: res.locks[0].tokenChainId,
+            tokenMin: res.locks[0].tokenMin,
+            tokenName: res.locks[0].tokenName,
+            tokenSymbol: res.locks[0].tokenSymbol,
+          };
+          setForm({ loading: false, step: 0, ...settings });
         }
         else {
           setForm({ loading: false, step: form.spaceDomain ? 2 : 1 });
@@ -128,12 +152,38 @@ export default function SettingsPage () {
 
   function saveSettings (settings: Settings) {
     setForm({ saving: true });
-    POST<Settings>('/settings', settings)
-      .then(settings => {
-        setForm({ ...settings, saving: false, step: 0 });
-      })
-      .catch(({ message }) => {
-        setForm({ error: message, saving: false });
+    const gateSettings = {
+      spaceDomain: settings.spaceDomain,
+      spaceIcon: settings.spaceIcon,
+      spaceId: settings.spaceId,
+      spaceName: settings.spaceName,
+    };
+    const lockSettings = {
+      lockType: settings.lockType,
+      addressWhitelist: settings.addressWhitelist,
+      POAPEventId: settings.POAPEventId,
+      POAPEventName: settings.POAPEventName,
+      spaceBlockIds: settings.spaceBlockIds,
+      spaceBlockUrls: settings.spaceBlockUrls,
+      spaceDefaultUrl: settings.spaceDefaultUrl,
+      tokenAddress: settings.tokenAddress,
+      tokenChainId: settings.tokenChainId,
+      tokenMin: settings.tokenMin,
+      tokenName: settings.tokenName,
+      tokenSymbol: settings.tokenSymbol,
+    };
+    POST<Omit<NotionGateSettings, 'locks' | 'spaceIsAdmin'>>('/settings', gateSettings)
+      .then (gate => {
+        const req = form.lockId
+          ? PUT<NotionGateSettings>('/settings/locks/' + form.lockId, lockSettings)
+          : POST<NotionGateSettings>('/settings', { gateId: gate.id, ...lockSettings });
+        req
+          .then(settings => {
+            setForm({ ...gate, ...settings, saving: false, step: 0 });
+          })
+          .catch(({ message }) => {
+            setForm({ error: message, saving: false });
+          });
       });
   }
 
@@ -161,6 +211,8 @@ export default function SettingsPage () {
   function saveForm (_form: TokenFormSettings) {
     setForm(_form);
     saveSettings({
+      lockId: form.lockId,
+      addressWhitelist: form.addressWhitelist,
       POAPEventId: _form.POAPEventId,
       POAPEventName: _form.POAPEventName,
       spaceBlockIds: form.spaceBlockIds,
@@ -173,7 +225,7 @@ export default function SettingsPage () {
       tokenAddress: _form.tokenAddress,
       tokenChainId: _form.tokenChainId,
       tokenMin: _form.tokenMin,
-      tokenType: _form.tokenType,
+      lockType: _form.lockType,
       tokenName: _form.tokenName,
       tokenSymbol: _form.tokenSymbol,
     });
@@ -274,6 +326,16 @@ function SettingsDisplay ({ settings, editSettings, deleteSettings }: { settings
         </Typography>
       </div>
       <div>
+        <Tooltip arrow placement='top' title='Edit gate'>
+          <IconButton onClick={editSettings}>
+            <EditIcon sx={{ color: '#aaa' }} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip arrow placement='top' title='Delete gate'>
+          <IconButton onClick={deleteLock}>
+            <DeleteIcon sx={{ color: '#aaa' }} />
+          </IconButton>
+        </Tooltip>
       </div>
     </CardContent>
     <Divider />
@@ -663,7 +725,7 @@ function NotionPreferencesForm ({ form, goBack, onSubmit }: { form: Settings, go
   </>);
 }
 
-type TokenFormSettings = Pick<Settings, 'POAPEventName' | 'POAPEventId' | 'tokenChainId' | 'tokenAddress' | 'tokenName' | 'tokenSymbol' | 'tokenType' | 'tokenMin'>;
+type TokenFormSettings = Pick<Settings, 'POAPEventName' | 'POAPEventId' | 'tokenChainId' | 'tokenAddress' | 'tokenName' | 'tokenSymbol' | 'lockType' | 'tokenMin'>;
 
 function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void, onSubmit: (form: TokenFormSettings) => void }) {
 
@@ -673,7 +735,7 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
     tokenSymbol: '',
     tokenChainId: 1,
     tokenMin: 1,
-    tokenType: 'ERC20',
+    lockType: 'ERC20',
     ...form
   });
 
@@ -690,7 +752,7 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
     const name = e.target.name;
     const value = e.target.value;
     setValues({ [name]: value });
-    if (name === 'tokenChainId' || name === 'tokenAddress' || name === 'tokenType') {
+    if (name === 'tokenChainId' || name === 'tokenAddress' || name === 'lockType') {
       onContractChange({ ...values, [name]: value });
     }
   }
@@ -699,8 +761,7 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
     setIsValidContract({ loading: true });
     GET<{ tokenName: string, tokenSymbol: string }>('/blockchain/getContract', {
       tokenAddress: _values.tokenAddress,
-      tokenChainId: _values.tokenChainId,
-      tokenType: _values.tokenType
+      tokenChainId: _values.tokenChainId
     }).then(res => {
       const tokenName = res.tokenName || _values.tokenName;
       const tokenSymbol = res.tokenSymbol || _values.tokenSymbol;
@@ -730,7 +791,7 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
         <Select
           size='small'
           name='tokenType'
-          value={values.tokenType}
+          value={values.lockType}
           onChange={updateValues}
         >
           {tokenTypes.map(option => (
@@ -740,7 +801,7 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
       </FormControl>
       <br /><br />
 
-      {values.tokenType !== 'POAP' && (<>
+      {values.lockType !== 'POAP' && (<>
         <FormLabel>Blockchain</FormLabel>
         <FormControl sx={{ width: '100%' }}>
           <Select
@@ -774,7 +835,7 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
         />
         <br /><br />
         <FormLabel>Token name</FormLabel>
-        {values.tokenType === 'ERC721' ? (
+        {values.lockType === 'ERC721' ? (
           <TextField
             fullWidth
             name='tokenName'
@@ -793,7 +854,7 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
             size='small'
           />
         )}
-        {values.tokenType === 'ERC20' && (<>
+        {values.lockType === 'ERC20' && (<>
           <br /><br />
           <FormLabel>Minimum tokens in wallet</FormLabel>
           <TextField
@@ -809,7 +870,7 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
           />
         </>)}
       </>)}
-      {values.tokenType === 'POAP' && (<>
+      {values.lockType === 'POAP' && (<>
         <FormLabel>POAP</FormLabel>
         <FormControl sx={{ width: '100%' }}>
           <POAPSelect value={values.POAPEventId} onChange={({ id, name }) => setValues({ POAPEventId: id, POAPEventName: name })} />
@@ -827,8 +888,7 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
         Back
       </Button>
       <PrimaryButton
-        //disabled={(values.tokenType === 'POAP' ? !values.POAPEventId : (!values.tokenAddress || !values.tokenType || !values.tokenChainId))}
-        disabled={true}
+        disabled={(values.lockType === 'POAP' ? !values.POAPEventId : (!values.tokenAddress || !values.lockType || !values.tokenChainId))}
         loading={form.saving}
         variant='outlined' size='large' onClick={submitForm}>
         {form.createdAt ? 'Save' : 'Create'}
