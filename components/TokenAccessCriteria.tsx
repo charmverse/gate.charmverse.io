@@ -1,11 +1,11 @@
 
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
-import { NotionGate } from '../api';
+import { NotionGateLock } from '../api';
 import { getContractUrl } from '../lib/blockchain';
 import BlockchainLogo from './BlockchainLogo';
 
-export default function TokenAccessCriteria ({ POAPEventName, tokenChainId, tokenAddress, tokenMin, tokenName, tokenType, tokenSymbol }: Pick<NotionGate, 'POAPEventName' | 'tokenChainId' | 'tokenAddress' | 'tokenType' | 'tokenMin' | 'tokenName' | 'tokenSymbol'>) {
+export default function TokenAccessCriteria ({ POAPEventName, tokenChainId, tokenAddress, tokenMin, tokenName, lockType, tokenSymbol }: Pick<NotionGateLock, 'POAPEventName' | 'tokenChainId' | 'tokenAddress' | 'lockType' | 'tokenMin' | 'tokenName' | 'tokenSymbol'>) {
   const contractUrl = getContractUrl(tokenChainId, tokenAddress);
   return (
     <Box
@@ -32,9 +32,9 @@ export default function TokenAccessCriteria ({ POAPEventName, tokenChainId, toke
         <BlockchainLogo chainId={tokenChainId} />
       </Box>
 
-      {tokenType === 'ERC721'
+      {lockType === 'ERC721'
         ? <span>Own at least <strong>{tokenMin} <Link href={contractUrl} target='_blank'>{tokenName}</Link> NFT</strong></span>
-        : (tokenType === 'ERC20'
+        : (lockType === 'ERC20'
           ? <span>Hold at least <strong>{tokenMin} <Link href={contractUrl} target='_blank'>${tokenSymbol}</Link></strong></span>
           : <span>Hold a <strong>{POAPEventName}</strong> POAP</span>)
       }

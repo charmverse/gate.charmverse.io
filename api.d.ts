@@ -1,22 +1,39 @@
 // interfaces served by api.charmverse.io
 
-export type NotionGate = {
-  createdAt: Date
-  updatedAt: Date | null
+export type LockType = 'ERC20' | 'ERC721' | 'POAP' | 'whitelist';
+
+export type NotionGateLock = {
   id: string
+  // special notion properties
   spaceBlockIds: string[]
   spaceBlockUrls: string[]
   spaceDefaultUrl: string | null
+  // requirements
+  lockType: LockType
+  addressWhitelist: string[]
+  tokenAddress?: string | null
+  tokenChainId?: number | null
+  tokenName?: string | null
+  tokenSymbol?: string | null
+  tokenMin?: number | null
+  POAPEventId?: number | null
+  POAPEventName?: string | null
+}
+
+export type NotionGateSettings = {
+  createdAt: string//Date
+  // unused fields
+  //updatedAt: Date | null
+  //userId: string
+  id: string
   spaceDomain: string
-  spaceIcon: string
+  spaceIcon?: string | null
   spaceName: string
   spaceId: string
-  tokenAddress: string
-  tokenName: string
-  tokenSymbol: string
-  tokenChainId: number
-  tokenType: string
-  tokenMin: number
-  userId: string
-  POAPEventName?: string
+  locks: NotionGateLock[]
+  // logical fields
+  spaceIsAdmin: boolean
+  spaceIsConnected: boolean
+  // deprecated
+  tokenType: LockType
 }
