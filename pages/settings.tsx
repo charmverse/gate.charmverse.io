@@ -854,7 +854,7 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
             size='small'
           />
         )}
-        {values.lockType === 'ERC20' && (<>
+        {(values.lockType === 'ERC20' || values.lockType === 'ERC721') && (<>
           <br /><br />
           <FormLabel>Minimum tokens in wallet</FormLabel>
           <TextField
