@@ -7,7 +7,7 @@ export type NotionGateLock = {
   // special notion properties
   spaceBlockIds: string[]
   spaceBlockUrls: string[]
-  spaceDefaultUrl: string | null
+  spaceDefaultUrl?: string | null
   // requirements
   lockType: LockType
   addressWhitelist: string[]
@@ -30,8 +30,11 @@ export type NotionGateSettings = {
   spaceIcon?: string | null
   spaceName: string
   spaceId: string
-  locks: NotionGateLock[]
   // logical fields
   spaceIsAdmin: boolean
   spaceIsConnected: boolean
+}
+
+export type NotionGateSettingsWithLocks = NotionGate & {
+  locks: NotionGateLock[]
 }

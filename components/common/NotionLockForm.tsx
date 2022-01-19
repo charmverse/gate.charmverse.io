@@ -22,19 +22,19 @@ import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import InputAdornment from '@mui/material/InputAdornment';
 import EditIcon from '@mui/icons-material/Edit';
-import { useFormState, useLoadingState } from '../lib/react';
-import { POST, GET, DELETE, PUT } from '../lib/http';
-import Page, { PageSection } from '../layouts/Page';
-import { SUPPORTED_BLOCKCHAINS } from '../lib/blockchain';
-import debounce from '../lib/debounce';
-import Button from '../components/Button';
-import NotionSpaceIcon from '../components/NotionSpaceIcon';
-import TrimmedContent from '../components/TrimmedContent';
-import PrimaryButton from '../components/PrimaryButton';
-import TokenAccessCriteria from '../components/TokenAccessCriteria';
-import InputLoadingIcon from '../components/InputLoadingIcon';
-import POAPSelect from '../components/POAPSelect';
-import { LockType, NotionGateSettings } from '../api';
+import { useFormState, useLoadingState } from '../../lib/react';
+import { POST, GET, DELETE, PUT } from '../../lib/http';
+import Page, { PageSection } from '../../layouts/Page';
+import { SUPPORTED_BLOCKCHAINS } from '../../lib/blockchain';
+import debounce from '../../lib/debounce';
+import Button from '../Button';
+import NotionSpaceIcon from '../NotionSpaceIcon';
+import TrimmedContent from '../TrimmedContent';
+import PrimaryButton from '../PrimaryButton';
+import TokenAccessCriteria from '../TokenAccessCriteria';
+import InputLoadingIcon from '../InputLoadingIcon';
+import POAPSelect from '../POAPSelect';
+import { LockType, NotionGateSettings } from '../../api';
 
 
 const lockTypes = [
@@ -98,7 +98,6 @@ const FORM_STEP_TITLES = {
 export default function SettingsPage () {
 
   const [form, setForm] = useFormState<Form>({ spaceBlockIds: [], spaceBlockUrls: [], step: -1 });
-  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
     GET<NotionGateSettings | null>('/settings')
@@ -133,13 +132,6 @@ export default function SettingsPage () {
         }
       });
   }, []);
-
-  useEffect(() => {
-    GET<User[]>('/notion/getUsers')
-      .then(_users => {
-        setUsers(_users);
-      });
-  }, [form.spaceId]);
 
   useEffect(() => {
     if (form.step !== -1) {
@@ -191,19 +183,6 @@ export default function SettingsPage () {
     setForm({ step: form.step - 1 });
   }
 
-  function editSettings () {
-    setForm({ step: 1 });
-  }
-
-  function deleteSettings () {
-    if (form.spaceDomain) {
-      DELETE('/settings', { domain: form.spaceDomain })
-        .then(() => {
-          setForm({ saving: false, spaceDomain: '', step: 1 });
-        });
-    }
-  }
-
   function updateFormAndContinue (_form: Partial<Form>) {
     setForm({ ..._form, step: form.step + 1 });
   }
@@ -231,27 +210,10 @@ export default function SettingsPage () {
     });
   }
 
-  const authorizedMembers = users.filter(user => !!user.address);
-  const unauthorizedMembers = users.filter(user => !user.address);
-
   return (
     <Page title={'Notion Token Gate'}>
       <PageSection sx={{ py: 6, minHeight: 700 }} width={600}>
         <Card sx={{ width: '100%' }}>
-          {form.step === -1 && (
-            <CardContent sx={{ my: 10, display: 'flex', justifyContent: 'center' }}>
-              <CircularProgress style={{ color: '#ccc' }} />
-            </CardContent>
-          )}
-          {form.step === 0 && (
-            <SettingsDisplay settings={form} editSettings={editSettings} deleteSettings={deleteSettings} />
-          )}
-          {form.step === 1 && (
-            <NotionForm form={form} goBack={goBack} onSubmit={updateFormAndContinue} />
-          )}
-          {form.step === 2 && (
-            <NotionValidateForm form={form} goBack={goBack} onSubmit={updateFormAndContinue} />
-          )}
           {form.step === 3 && (
             <NotionPreferencesForm form={form} goBack={goBack} onSubmit={updateFormAndContinue} />
           )}
@@ -259,274 +221,11 @@ export default function SettingsPage () {
             <TokenForm form={form} goBack={goBack} onSubmit={saveForm} />
           )}
         </Card>
-        {form.step !== -1 && (
-          <FormHelperText sx={{ mt: 2, mb: 6, textAlign: 'center' }}>
-            Questions or feature requests? Email <Link sx={{ color: 'inherit', fontWeight: 'bold' }} href='mailto:hello@charmverse.io'>hello@charmverse.io</Link>
-          </FormHelperText>
-        )}
-        {form.step === 0 && (<Box sx={{ pb: 4 }}>
-          <Typography variant='h2'>
-            Authorized Members <Chip size='small' label={authorizedMembers.length} />
-          </Typography>
-          <br />
-          <Grid container columnSpacing={2} rowSpacing={3} justifyContent='flex-start'>
-            {authorizedMembers.map(user => (
-              <Grid component={Box} item key={user.id} sx={{ width: 80 }} display='flex' alignItems='center' justifyContent='flex-start' flexDirection='column'>
-                <Avatar src={user.icon} />
-                <Typography variant='body2' sx={{ my: 2 }}>
-                  <strong>{shortenedContractAddresss(user.address)}</strong>
-                </Typography>
-              </Grid>
-            ))}
-          </Grid>
-          <br />
-          {(unauthorizedMembers.length > 0) && <>
-            <Typography variant='h2'>
-              Other Notion Users <Chip size='small' label={unauthorizedMembers.length} />
-            </Typography>
-            <br />
-            <Grid container columnSpacing={2} rowSpacing={3} justifyContent='flex-start'>
-              {unauthorizedMembers.map(user => (
-                <Grid component={Box} item key={user.id} sx={{ width: 80 }} display='flex' alignItems='center' justifyContent='flex-start' flexDirection='column'>
-                  <Avatar src={user.icon} />
-                </Grid>
-              ))}
-            </Grid>
-          </>}
-        </Box>)}
       </PageSection>
     </Page>
   );
 }
 
-function SettingsDisplay ({ settings, editSettings, deleteSettings }: { settings: Settings, editSettings: () => void, deleteSettings: () => void }) {
-
-  const notionUrl = 'https://notion.so/' + settings.spaceDomain;
-  const shareUrl = process.env.NEXT_PUBLIC_HOSTNAME + '/notion/' + settings.spaceDomain;
-  const [tooltipIsOpen, setTooltipIsOpen] = useState(false);
-
-  function alertCopied () {
-    setTooltipIsOpen(true);
-    setTimeout(() => setTooltipIsOpen(false), 2000);
-  }
-
-  function deleteLock () {
-    if (confirm('Members will not be removed from the space automatically. This action cannot be undone. Are you sure?')) {
-      deleteSettings();
-    }
-  }
-
-  return (<>
-    <CardContent sx={{ px: 4, pt: 3, pb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-
-      <div>
-        <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Notion Workspace</Typography>
-        <Typography>
-          <Link href={notionUrl} target='_blank'>{settings.spaceName}</Link>
-        </Typography>
-      </div>
-      <div>
-        <Tooltip arrow placement='top' title='Edit gate'>
-          <IconButton onClick={editSettings}>
-            <EditIcon sx={{ color: '#aaa' }} />
-          </IconButton>
-        </Tooltip>
-        <Tooltip arrow placement='top' title='Delete gate'>
-          <IconButton onClick={deleteLock}>
-            <DeleteIcon sx={{ color: '#aaa' }} />
-          </IconButton>
-        </Tooltip>
-      </div>
-    </CardContent>
-    <Divider />
-    <CardContent sx={{ p: 4, pb: 2 }}>
-
-      <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Access Criteria</Typography>
-      <TokenAccessCriteria {...settings} />
-
-      <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Share URL</Typography>
-      <Box
-        sx={{
-          p: 3,
-          pl: 8,
-          mb: 2,
-          background: 'white',
-          borderRadius: 5,
-          textAlign: 'center',
-          border: '1px solid #ccc',
-          position: 'relative',
-          width: '100%',
-        }}
-      >
-        <CopyToClipboard text={shareUrl} onCopy={() => alertCopied()}>
-          <Box display='flex' alignItems='center'>
-            <Typography>
-              <Link href={shareUrl} target='_blank'>{shareUrl}</Link>
-            </Typography>
-            <Tooltip
-              arrow
-              placement='top'
-              disableFocusListener
-              disableHoverListener
-              disableTouchListener
-              onOpen={() => setTooltipIsOpen(true)}
-              onClose={() => setTooltipIsOpen(false)}
-              open={tooltipIsOpen}
-              title='Copied!'
-            >
-              <CopyIcon sx={{ cursor: 'pointer', color: '#777', ml: 1 }} />
-            </Tooltip>
-          </Box>
-        </CopyToClipboard>
-      </Box>
-
-    </CardContent>
-  </>);
-}
-
-function NotionForm ({ form, goBack, onSubmit }: { form: Settings, goBack: () => void, onSubmit: (form: Pick<Settings, 'spaceDomain' | 'spaceId'>) => void }) {
-  const [spaceDomain, setSpace] = useState<string>(form.spaceDomain);
-
-  function saveNotion () {
-    if (spaceDomain) {
-      const changed = spaceDomain !== form.spaceDomain;
-      // set spaceId to '' so we refresh in the next step
-      const spaceId = changed ? '' : form.spaceId;
-      onSubmit({ spaceDomain, spaceId });
-    }
-  }
-
-  function catchReturn (e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter' && spaceDomain) {
-      saveNotion();
-    }
-  }
-
-  return (<>
-    <CardContent sx={{ px: 4, py: 2 }}>
-      {/* <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Step 1 of 4:</Typography> */}
-      <Typography variant='h2' sx={{ fontSize: 18 }}>1. Enter your Notion workspace domain</Typography>
-    </CardContent>
-    <Divider />
-    <CardContent sx={{ p: 4 }}>
-      <TextField
-        defaultValue={form.spaceDomain}
-        fullWidth
-        required
-        size='small'
-        onKeyPress={catchReturn}
-        helperText={<>
-          Find your domain under <Link href='https://notion.so' target='_blank'>Workspace settings.</Link> A Team Plan is required.
-        </>}
-        InputProps={{
-          placeholder: 'ourcommunity',
-          startAdornment:(
-            <InputAdornment position='start'>
-              https://notion.so/
-            </InputAdornment>
-          )
-        }}
-        onChange={e => setSpace(e.target.value)}
-      />
-    </CardContent>
-    <Divider />
-    <CardContent sx={{ px: 4, py: 2, display: 'flex', justifyContent: 'space-between' }}>
-      {form.createdAt ?
-        <Button variant='outlined' size='large' onClick={goBack}>
-          Cancel
-        </Button>
-        : <div></div>
-      }
-      <PrimaryButton disabled={!spaceDomain} variant='outlined' size='large' onClick={saveNotion}>
-        Continue
-      </PrimaryButton>
-    </CardContent>
-  </>);
-}
-
-
-function NotionValidateForm ({ form, goBack, onSubmit }: { form: Settings, goBack: () => void, onSubmit: (form: Pick<Settings, 'spaceId' | 'spaceIsAdmin' | 'spaceDomain' | 'spaceIcon' | 'spaceName'>) => void }) {
-  const [space, setSpace] = useLoadingState<{ error: string, value?: { spaceId: string, spaceIsAdmin: boolean, spaceIcon: string, spaceName: string, spaceDomain: string } | null }>({
-    loading: true,
-    error: '',
-    value: (form.spaceId && form.spaceDomain)
-      ? { spaceIcon: form.spaceIcon, spaceIsAdmin: form.spaceIsAdmin, spaceName: form.spaceName, spaceId: form.spaceId, spaceDomain: form.spaceDomain }
-      : undefined
-  });
-
-  function getSpaceByDomain () {
-    setSpace({ error: '', loading: true });
-    GET<Space>('/notion/spaceByDomain', { domain: form.spaceDomain })
-      .then(space => {
-        if (space) {
-          setSpace({ error: '', loading: false, value: { spaceIcon: space.icon, spaceIsAdmin: space.isAdmin, spaceName: space.name, spaceDomain: space.domain, spaceId: space.id} });
-        }
-        else {
-          setSpace({ error: '', loading: false, value: null });
-        }
-      })
-      .catch(({ message }: { message: string }) => {
-        setSpace({ error: message, loading: false, value: null });
-      });
-  }
-
-  function saveNotion () {
-    if (space.value) {
-      onSubmit(space.value);
-    }
-  }
-
-  useEffect(() => {
-    getSpaceByDomain();
-  }, []);
-
-  return (<>
-    <CardContent sx={{ px: 4, py: 2 }}>
-    {/* <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Step 2 of 4:</Typography> */}
-      <Typography variant='h2' sx={{ fontSize: 18 }}>2. Enable CharmVerse to manage users</Typography>
-    </CardContent>
-    <Divider />
-    <CardContent sx={{ p: 4, py: 2 }}>
-      <Typography>
-        Invite <strong>admin@charmverse.io</strong> to be an Admin of your <Link href='https://notion.so' target='_blank'>workspace</Link>.
-      </Typography>
-      <br />
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1, mx: 'auto' }}>
-        <NotionSpaceIcon src={space.value?.spaceIcon} />
-      </Box>
-      <Typography gutterBottom variant='h2' sx={{ fontSize: 16, mb: 2, textAlign: 'center' }}>{space.value?.spaceName || `https://notion.so/${form.spaceDomain}`}</Typography>
-      <Box sx={{ textAlign: 'center' }}>
-        <Button
-          onClick={getSpaceByDomain}
-          variant='outlined'
-          color={(!space.loading && space.value) ? 'success' : 'secondary'}
-          sx={{
-            pointerEvents: (space.loading || space.value) ? 'none' : 'auto'
-          }}
-          endIcon={<InputLoadingIcon loading={space.loading} isValid={!!space.value} />}
-        >
-          {space.loading ? 'Checking' : space.value ? `Connected${space.value.spaceIsAdmin ? '' : ' as guest'}` : space.error ? 'Check again' : 'Click to check'}
-        </Button>
-        {space.error && <FormHelperText sx={{ textAlign: 'center' }} error>
-          {space.error}
-        </FormHelperText>}
-        <TrimmedContent
-          html={`We only leverage these the administrative privileges above to manage user and group access. We read and present Notion metadata as part of the services including your Notion ID, email, and electronic wallet address. We do not read or edit any content in your public or private workspace. No additional information will be collected from your workspace. We do not and will not sell Your data, individually or in aggregated form. See <a href='https://charmverse.io/privacy-policy' target='_blank'>Privacy Policy</a> for details.`}
-          maxLength={25}
-          sx={{ mt: 2, textAlign: 'left' }} />
-      </Box>
-    </CardContent>
-    <Divider />
-    <CardContent sx={{ px: 4, py: 2, display: 'flex', justifyContent: 'space-between' }}>
-      <Button variant='outlined' size='large' onClick={goBack}>
-        Back
-      </Button>
-      <PrimaryButton disabled={!space.value} variant='outlined' size='large' onClick={saveNotion}>
-        Continue
-      </PrimaryButton>
-    </CardContent>
-  </>);
-}
 
 const Tab = styled(TabUnstyled)`
   background-color: transparent;

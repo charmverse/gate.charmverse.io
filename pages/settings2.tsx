@@ -5,6 +5,8 @@ import { CopyToClipboard } from 'react-copy-to-clipboard';
 import Typography from '@mui/material/Typography';
 import { buttonUnstyledClasses, Card, CardContent, CircularProgress, Divider, FormControlLabel, FormHelperText, FormLabel, Grid, IconButton, Radio, RadioGroup, SelectChangeEvent } from '@mui/material';
 import Box from '@mui/material/Box';
+import InfoIcon from '@mui/icons-material/HelpOutline';
+import PlusIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CopyIcon from '@mui/icons-material/ContentCopy';
 import Link from '@mui/material/Link';
@@ -34,13 +36,13 @@ import PrimaryButton from '../components/PrimaryButton';
 import TokenAccessCriteria from '../components/TokenAccessCriteria';
 import InputLoadingIcon from '../components/InputLoadingIcon';
 import POAPSelect from '../components/POAPSelect';
-import { LockType, NotionGateSettings } from '../api';
+import { LockType, NotionGateSettings, NotionGateLock } from '../api';
 
 
-const lockTypes = [
-  { id: 'ERC20', name: 'ERC-20' },
-  { id: 'ERC721', name: 'ERC-721' },
-  { id: 'POAP', name: 'POAP' }
+const lockTypes: { id: LockType, name: string, label: string }[] = [
+  { id: 'ERC20', name: 'ERC-20', label: 'Hold an NFT' },
+  { id: 'ERC721', name: 'ERC-721', label: 'Hold a Token' },
+  { id: 'POAP', name: 'POAP', label: 'Hold a POAP' }
 ];
 
 interface Space {
@@ -98,6 +100,7 @@ const FORM_STEP_TITLES = {
 export default function SettingsPage () {
 
   const [form, setForm] = useFormState<Form>({ spaceBlockIds: [], spaceBlockUrls: [], step: -1 });
+  const [locks, setLocks] = useState<NotionGateLock[]>([]);
   const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
@@ -127,6 +130,7 @@ export default function SettingsPage () {
             tokenSymbol: res.locks[0].tokenSymbol,
           };
           setForm({ loading: false, step: 0, ...settings });
+          setLocks(res.locks);
         }
         else {
           setForm({ loading: false, step: form.spaceDomain ? 2 : 1 });
@@ -234,37 +238,156 @@ export default function SettingsPage () {
   const authorizedMembers = users.filter(user => !!user.address);
   const unauthorizedMembers = users.filter(user => !user.address);
 
+  const [space, setSpace] = useLoadingState<{ error: string, value?: { spaceId: string, spaceIsAdmin: boolean, spaceIcon: string, spaceName: string, spaceDomain: string } | null }>({
+    loading: true,
+    error: '',
+    value: (form.spaceId && form.spaceDomain)
+      ? { spaceIcon: form.spaceIcon, spaceIsAdmin: form.spaceIsAdmin, spaceName: form.spaceName, spaceId: form.spaceId, spaceDomain: form.spaceDomain }
+      : undefined
+  });
+  function getSpaceByDomain () {
+    setSpace({ error: '', loading: true });
+    GET<Space>('/notion/spaceByDomain', { domain: form.spaceDomain })
+      .then(space => {
+        if (space) {
+          setSpace({ error: '', loading: false, value: { spaceIcon: space.icon, spaceIsAdmin: space.isAdmin, spaceName: space.name, spaceDomain: space.domain, spaceId: space.id} });
+        }
+        else {
+          setSpace({ error: '', loading: false, value: null });
+        }
+      })
+      .catch(({ message }: { message: string }) => {
+        setSpace({ error: message, loading: false, value: null });
+      });
+  }
+
+  function addLock (lockType: LockType) {
+    setLocks([...locks, {
+      id: '' + Math.random(),
+      addressWhitelist: [],
+      spaceBlockIds: [],
+      spaceBlockUrls: [],
+      lockType,
+    }]);
+  }
+
   return (
     <Page title={'Notion Token Gate'}>
-      <PageSection sx={{ py: 6, minHeight: 700 }} width={600}>
-        <Card sx={{ width: '100%' }}>
-          {form.step === -1 && (
-            <CardContent sx={{ my: 10, display: 'flex', justifyContent: 'center' }}>
+      <PageSection sx={{ py: 6, minHeight: 700 }} width={960}>
+        {form.loading && (
+          <Box display='flex' justifyContent='center' mt={5} mb={10}>
               <CircularProgress style={{ color: '#ccc' }} />
-            </CardContent>
-          )}
-          {form.step === 0 && (
-            <SettingsDisplay settings={form} editSettings={editSettings} deleteSettings={deleteSettings} />
-          )}
-          {form.step === 1 && (
-            <NotionForm form={form} goBack={goBack} onSubmit={updateFormAndContinue} />
-          )}
-          {form.step === 2 && (
-            <NotionValidateForm form={form} goBack={goBack} onSubmit={updateFormAndContinue} />
-          )}
-          {form.step === 3 && (
-            <NotionPreferencesForm form={form} goBack={goBack} onSubmit={updateFormAndContinue} />
-          )}
-          {form.step === 4 && (
-            <TokenForm form={form} goBack={goBack} onSubmit={saveForm} />
-          )}
-        </Card>
-        {form.step !== -1 && (
-          <FormHelperText sx={{ mt: 2, mb: 6, textAlign: 'center' }}>
-            Questions or feature requests? Email <Link sx={{ color: 'inherit', fontWeight: 'bold' }} href='mailto:hello@charmverse.io'>hello@charmverse.io</Link>
-          </FormHelperText>
+          </Box>
         )}
-        {form.step === 0 && (<Box sx={{ pb: 4 }}>
+        {!form.loading && (
+          <>
+            <Typography sx={{ mb: 2 }} variant='h6'>Connect to CharmVerse</Typography>
+            <Card sx={{ width: '100%' }}>
+              <CardContent sx={{ p: 4, mb: 3 }}>
+                <Typography sx={{ fontWeight: 'bold', mb: 2 }}>Notion Settings</Typography>
+                <Grid container spacing={4}>
+                  <Grid item xs={4}>
+                    <Typography gutterBottom>1. Enter your Notion domain
+                    <Tooltip
+                      arrow
+                      placement='top'
+                      title={<>
+                        Find your domain under <Link href='https://notion.so' target='_blank'>Workspace settings.</Link> A Team Plan is required.
+                      </>}
+                      >
+                        <InfoIcon sx={{ fontSize: 18, color: '#aaa', marginLeft: '.3em' }} />
+                      </Tooltip>
+                    </Typography>
+                    <TextField
+                      defaultValue={form.spaceDomain}
+                      fullWidth
+                      required
+                      size='small'
+                      InputProps={{
+                        placeholder: 'ourcommunity',
+                        startAdornment:(
+                          <InputAdornment position='start'>
+                            https://notion.so/
+                          </InputAdornment>
+                        )
+                      }}
+                      onChange={e => setSpace(e.target.value)}
+                    />
+                    {/* <Divider sx={{ mt: 3, mb: 2, width: "100%" }} />
+                    <FormHelperText>
+                      Find your domain under <Link href='https://notion.so' target='_blank'>Workspace settings.</Link> A Team Plan is required.
+                    </FormHelperText> */}
+                  </Grid>
+                  <Grid item xs={4}>
+                    <Typography gutterBottom>2. Add admin@charmverse.io as admin
+                      <Tooltip
+                        arrow
+                        placement='top'
+                        title={<>
+                          We only leverage these the administrative privileges above to manage user and group access. We read and present Notion metadata as part of the services including your Notion ID, email, and electronic wallet address. We do not read or edit any content in your public or private workspace. No additional information will be collected from your workspace. We do not and will not sell Your data, individually or in aggregated form. See <a href='https://charmverse.io/privacy-policy' target='_blank'>Privacy Policy</a> for details.
+                        </>}
+                        >
+                          <InfoIcon sx={{ fontSize: 18, color: '#aaa', marginLeft: '.3em' }} />
+                        </Tooltip>
+                    </Typography>
+                    <Button
+                      onClick={getSpaceByDomain}
+                      variant='outlined'
+                      size='large'
+                      color={(!space.loading && space.value) ? 'success' : 'secondary'}
+                      sx={{
+                        pointerEvents: (space.loading || space.value) ? 'none' : 'auto'
+                      }}
+                      endIcon={<InputLoadingIcon loading={space.loading} isValid={!!space.value} />}
+                    >
+                      {space.loading ? 'Checking' : space.value ? `Connected${space.value.spaceIsAdmin ? '' : ' as guest'}` : space.error ? 'Check again' : 'Click to check'}
+                    </Button>
+                    {space.error && <FormHelperText sx={{ textAlign: 'center' }} error>
+                      {space.error}
+                    </FormHelperText>}
+                    {/* <Divider sx={{ mt: 3, mb: 2, width: "100%" }} />
+
+                    <TrimmedContent
+                      html={`We only leverage these the administrative privileges above to manage user and group access. We read and present Notion metadata as part of the services including your Notion ID, email, and electronic wallet address. We do not read or edit any content in your public or private workspace. No additional information will be collected from your workspace. We do not and will not sell Your data, individually or in aggregated form. See <a href='https://charmverse.io/privacy-policy' target='_blank'>Privacy Policy</a> for details.`}
+                      maxLength={14}
+                      sx={{ textAlign: 'left' }} /> */}
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+            <Typography sx={{ mt: 3, mb: 2 }} variant='h6'>Set requirements</Typography>
+            <Grid container spacing={3}>
+              {locks.map(lock => (
+                <Grid item xs={4} key={lock.id}>
+                  <Card>
+                    <CardContent sx={{ p: 3 }}>
+                      {lock.lockType === 'ERC721' && <ERC721LockForm lock={lock} />}
+                      {lock.lockType === 'ERC20' && <ERC20LockForm lock={lock} />}
+                      {lock.lockType === 'POAP' && <POAPLockForm lock={lock} />}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+            <Typography sx={{ mt: 2, mb: 2 }} variant='h6'>Add more</Typography>
+            <Grid container spacing={3}>
+              {lockTypes.map(lockType => (
+                <Grid item xs={4} key={lockType.id}>
+                  <Button
+                    fullWidth={true}
+                    startIcon={<PlusIcon sx={{ float: 'left', fontSize: 24 }} />} variant='outlined' size='large' onClick={() => addLock(lockType.id)}
+                    sx={{ display: 'block', borderRadius: '20px', p: 3 }}>
+                    {lockType.label}
+                  </Button>
+                </Grid>
+              ))}
+            </Grid>
+          </>
+        )}
+        <FormHelperText sx={{ mt: 6, mb: 6, textAlign: 'center' }}>
+          Questions or feature requests? Email <Link sx={{ color: 'inherit', fontWeight: 'bold' }} href='mailto:hello@charmverse.io'>hello@charmverse.io</Link>
+        </FormHelperText>
+        <Box sx={{ pb: 4 }}>
           <Typography variant='h2'>
             Authorized Members <Chip size='small' label={authorizedMembers.length} />
           </Typography>
@@ -293,10 +416,125 @@ export default function SettingsPage () {
               ))}
             </Grid>
           </>}
-        </Box>)}
+        </Box>
       </PageSection>
     </Page>
   );
+}
+
+function ERC20LockForm ({ lock }: { lock: NotionGateLock }) {
+
+  const [isValidContract, setIsValidContract] = useLoadingState({ valid: false });
+
+  return (
+    <>
+      <FormLabel>Chain</FormLabel>
+      <FormControl sx={{ width: '100%' }}>
+        <Select
+          size='small'
+          name='tokenChainId'
+          value={lock.tokenChainId}
+        >
+          {SUPPORTED_BLOCKCHAINS.map(option => (
+            <MenuItem key={option.id} value={option.id}>{option.name}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+      <Divider sx={{ my: 2 }} />
+      <FormLabel>Token</FormLabel>
+      <TextField
+        fullWidth
+        name='tokenAddress'
+        value={lock.tokenAddress || ''}
+        required
+        size='small'
+        InputProps={{
+          endAdornment: (
+            <InputAdornment position='end'>
+              <InputLoadingIcon loading={isValidContract.loading} isValid={isValidContract.valid} />
+            </InputAdornment>
+          ),
+          placeholder: '0x0000000000000000000000000000000000000000'
+        }}
+      />
+      <br /><br />
+      <FormLabel>Minimum amount to hold:</FormLabel>
+      <TextField
+        fullWidth
+        name='tokenMin'
+        value={lock.tokenMin}
+        size='small'
+        InputProps={{
+          type: 'number',
+          placeholder: '1'
+        }}
+      />
+    </>
+  )
+}
+function ERC721LockForm ({ lock }: { lock: NotionGateLock }) {
+
+  const [isValidContract, setIsValidContract] = useLoadingState({ valid: false });
+
+  return (
+    <>
+      <FormLabel>Chain</FormLabel>
+      <FormControl sx={{ width: '100%' }}>
+        <Select
+          size='small'
+          name='tokenChainId'
+          value={lock.tokenChainId}
+        >
+          {SUPPORTED_BLOCKCHAINS.map(option => (
+            <MenuItem key={option.id} value={option.id}>{option.name}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+      <Divider sx={{ my: 2 }} />
+      <FormLabel>NFT</FormLabel>
+      <TextField
+        fullWidth
+        name='tokenAddress'
+        value={lock.tokenAddress || ''}
+        required
+        size='small'
+        InputProps={{
+          endAdornment: (
+            <InputAdornment position='end'>
+              <InputLoadingIcon loading={isValidContract.loading} isValid={isValidContract.valid} />
+            </InputAdornment>
+          ),
+          placeholder: '0x0000000000000000000000000000000000000000'
+        }}
+      />
+      <br /><br />
+      <FormLabel>Minimum amount to hold:</FormLabel>
+      <TextField
+        fullWidth
+        name='tokenMin'
+        value={lock.tokenMin}
+        size='small'
+        InputProps={{
+          type: 'number',
+          placeholder: '1'
+        }}
+      />
+    </>
+  )
+}
+function POAPLockForm ({ lock }: { lock: NotionGateLock }) {
+
+  return (
+    <>
+      <FormLabel>Chain</FormLabel>
+      <Typography>Works on both ETHEREUM and XDAI</Typography>
+      <Divider sx={{ my: 2 }} />
+      <FormLabel>POAP</FormLabel>
+      <FormControl sx={{ width: '100%' }}>
+        <POAPSelect value={lock.POAPEventId} onChange={({ id, name }) => setValues({ POAPEventId: id, POAPEventName: name })} />
+      </FormControl>
+    </>
+  )
 }
 
 function SettingsDisplay ({ settings, editSettings, deleteSettings }: { settings: Settings, editSettings: () => void, deleteSettings: () => void }) {
@@ -317,32 +555,11 @@ function SettingsDisplay ({ settings, editSettings, deleteSettings }: { settings
   }
 
   return (<>
-    <CardContent sx={{ px: 4, pt: 3, pb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-
-      <div>
-        <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Notion Workspace</Typography>
-        <Typography>
-          <Link href={notionUrl} target='_blank'>{settings.spaceName}</Link>
-        </Typography>
-      </div>
-      <div>
-        <Tooltip arrow placement='top' title='Edit gate'>
-          <IconButton onClick={editSettings}>
-            <EditIcon sx={{ color: '#aaa' }} />
-          </IconButton>
-        </Tooltip>
-        <Tooltip arrow placement='top' title='Delete gate'>
-          <IconButton onClick={deleteLock}>
-            <DeleteIcon sx={{ color: '#aaa' }} />
-          </IconButton>
-        </Tooltip>
-      </div>
-    </CardContent>
-    <Divider />
-    <CardContent sx={{ p: 4, pb: 2 }}>
+    <TokenAccessCriteria {...settings} />
+    <CardContent sx={{ p: 4 }}>
 
       <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Access Criteria</Typography>
-      <TokenAccessCriteria {...settings} />
+
 
       <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Share URL</Typography>
       <Box
@@ -380,66 +597,6 @@ function SettingsDisplay ({ settings, editSettings, deleteSettings }: { settings
         </CopyToClipboard>
       </Box>
 
-    </CardContent>
-  </>);
-}
-
-function NotionForm ({ form, goBack, onSubmit }: { form: Settings, goBack: () => void, onSubmit: (form: Pick<Settings, 'spaceDomain' | 'spaceId'>) => void }) {
-  const [spaceDomain, setSpace] = useState<string>(form.spaceDomain);
-
-  function saveNotion () {
-    if (spaceDomain) {
-      const changed = spaceDomain !== form.spaceDomain;
-      // set spaceId to '' so we refresh in the next step
-      const spaceId = changed ? '' : form.spaceId;
-      onSubmit({ spaceDomain, spaceId });
-    }
-  }
-
-  function catchReturn (e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter' && spaceDomain) {
-      saveNotion();
-    }
-  }
-
-  return (<>
-    <CardContent sx={{ px: 4, py: 2 }}>
-      {/* <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Step 1 of 4:</Typography> */}
-      <Typography variant='h2' sx={{ fontSize: 18 }}>1. Enter your Notion workspace domain</Typography>
-    </CardContent>
-    <Divider />
-    <CardContent sx={{ p: 4 }}>
-      <TextField
-        defaultValue={form.spaceDomain}
-        fullWidth
-        required
-        size='small'
-        onKeyPress={catchReturn}
-        helperText={<>
-          Find your domain under <Link href='https://notion.so' target='_blank'>Workspace settings.</Link> A Team Plan is required.
-        </>}
-        InputProps={{
-          placeholder: 'ourcommunity',
-          startAdornment:(
-            <InputAdornment position='start'>
-              https://notion.so/
-            </InputAdornment>
-          )
-        }}
-        onChange={e => setSpace(e.target.value)}
-      />
-    </CardContent>
-    <Divider />
-    <CardContent sx={{ px: 4, py: 2, display: 'flex', justifyContent: 'space-between' }}>
-      {form.createdAt ?
-        <Button variant='outlined' size='large' onClick={goBack}>
-          Cancel
-        </Button>
-        : <div></div>
-      }
-      <PrimaryButton disabled={!spaceDomain} variant='outlined' size='large' onClick={saveNotion}>
-        Continue
-      </PrimaryButton>
     </CardContent>
   </>);
 }
@@ -482,8 +639,8 @@ function NotionValidateForm ({ form, goBack, onSubmit }: { form: Settings, goBac
 
   return (<>
     <CardContent sx={{ px: 4, py: 2 }}>
-    {/* <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Step 2 of 4:</Typography> */}
-      <Typography variant='h2' sx={{ fontSize: 18 }}>2. Enable CharmVerse to manage users</Typography>
+    <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Step 2 of 4:</Typography>
+      <Typography variant='h2' sx={{ fontSize: 18 }}>Enable CharmVerse to manage users</Typography>
     </CardContent>
     <Divider />
     <CardContent sx={{ p: 4, py: 2 }}>
