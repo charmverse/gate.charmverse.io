@@ -112,19 +112,19 @@ export default function SettingsPage () {
             spaceIcon: res.spaceIcon,
             spaceId: res.spaceId,
             // lock settings
-            lockId: res.locks[0].id,
-            lockType: res.locks[0].lockType,
-            addressWhitelist: res.locks[0].addressWhitelist,
-            spaceBlockIds: res.locks[0].spaceBlockIds,
-            spaceBlockUrls: res.locks[0].spaceBlockUrls,
-            spaceDefaultUrl: res.locks[0].spaceDefaultUrl,
-            POAPEventId: res.locks[0].POAPEventId,
-            POAPEventName: res.locks[0].POAPEventName,
-            tokenAddress: res.locks[0].tokenAddress,
-            tokenChainId: res.locks[0].tokenChainId,
-            tokenMin: res.locks[0].tokenMin,
-            tokenName: res.locks[0].tokenName,
-            tokenSymbol: res.locks[0].tokenSymbol,
+            lockId: res.locks[0]?.id,
+            lockType: res.locks[0]?.lockType,
+            addressWhitelist: res.locks[0]?.addressWhitelist || [],
+            spaceBlockIds: res.locks[0]?.spaceBlockIds || [],
+            spaceBlockUrls: res.locks[0]?.spaceBlockUrls || [],
+            spaceDefaultUrl: res.locks[0]?.spaceDefaultUrl,
+            POAPEventId: res.locks[0]?.POAPEventId,
+            POAPEventName: res.locks[0]?.POAPEventName,
+            tokenAddress: res.locks[0]?.tokenAddress,
+            tokenChainId: res.locks[0]?.tokenChainId,
+            tokenMin: res.locks[0]?.tokenMin || 1,
+            tokenName: res.locks[0]?.tokenName,
+            tokenSymbol: res.locks[0]?.tokenSymbol,
           };
           setForm({ loading: false, step: 0, ...settings });
         }
@@ -176,7 +176,7 @@ export default function SettingsPage () {
       .then (gate => {
         const req = form.lockId
           ? PUT<NotionGateSettings>('/settings/locks/' + form.lockId, lockSettings)
-          : POST<NotionGateSettings>('/settings', { gateId: gate.id, ...lockSettings });
+          : POST<NotionGateSettings>('/settings/locks', { gateId: gate.id, ...lockSettings });
         req
           .then(settings => {
             setForm({ ...gate, ...settings, saving: false, step: 0 });
