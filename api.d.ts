@@ -32,7 +32,7 @@ export type NotionGateSettings = {
   spaceId: string
   // logical fields
   spaceIsAdmin: boolean
-  spaceIsConnected: boolean
+  // spaceIsConnected: boolean
 }
 
 export type NotionGateSettingsWithLocks = NotionGate & {

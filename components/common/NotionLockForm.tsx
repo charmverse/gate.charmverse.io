@@ -23,7 +23,7 @@ import Select from '@mui/material/Select';
 import InputAdornment from '@mui/material/InputAdornment';
 import EditIcon from '@mui/icons-material/Edit';
 import { useFormState, useLoadingState } from '../../lib/react';
-import { POST, GET, DELETE, PUT } from '../../lib/http';
+import { POST, GET, DELETE, PUT } from '../../lib/http/browser';
 import Page, { PageSection } from '../../layouts/Page';
 import { SUPPORTED_BLOCKCHAINS } from '../../lib/blockchain';
 import debounce from '../../lib/debounce';
@@ -34,7 +34,7 @@ import PrimaryButton from '../PrimaryButton';
 import TokenAccessCriteria from '../TokenAccessCriteria';
 import InputLoadingIcon from '../InputLoadingIcon';
 import POAPSelect from '../POAPSelect';
-import { LockType, NotionGateSettings } from '../../api';
+import { LockType, NotionGateLock } from '../../api';
 
 
 const lockTypes = [
@@ -51,30 +51,7 @@ interface Space {
   name: string;
 }
 
-// TODO: Delete this and rely on NotionGateSettings instead
-interface Settings {
-  createdAt?: string;
-  lockId?: string;
-  addressWhitelist: string[];
-  spaceIsAdmin?: boolean;
-  spaceBlockIds: string[];
-  spaceBlockUrls: string[];
-  spaceDefaultUrl?: string;
-  spaceDomain: string;
-  spaceName: string;
-  spaceIcon: string;
-  spaceId: string;
-  POAPEventId?: number;
-  POAPEventName?: string;
-  tokenAddress: string;
-  tokenChainId: number;
-  tokenName: string;
-  tokenSymbol: string;
-  tokenMin: number
-  lockType: LockType;
-}
-
-interface Form extends Settings {
+interface Form extends NotionGateLock {
   step: number;
   error?: string;
   saving?: boolean;
@@ -95,134 +72,81 @@ const FORM_STEP_TITLES = {
   4: 'Settings 4/4: Set token criteria'
 }
 
-export default function SettingsPage () {
+export default function NotionLockForm ({ gateId, hasAdminAccess, lock, goBack: goBackParent, onSubmit }: { gateId: string, hasAdminAccess: boolean, lock: Partial<NotionGateLock>, goBack?: () => void, onSubmit: (lock: NotionGateLock) => void }) {
 
-  const [form, setForm] = useFormState<Form>({ spaceBlockIds: [], spaceBlockUrls: [], step: -1 });
+  const [form, setForm] = useFormState<Form>({
+    id: lock.id,
+    // special notion properties
+    spaceBlockIds: lock.spaceBlockIds || [],
+    spaceBlockUrls: lock.spaceBlockUrls || [],
+    spaceDefaultUrl: lock.spaceDefaultUrl,
+    // requirements
+    lockType: lock.lockType || 'ERC20',
+    addressWhitelist: lock.addressWhitelist || [],
+    tokenAddress: lock.tokenAddress,
+    tokenChainId: lock.tokenChainId || 1,
+    tokenName: lock.tokenName,
+    tokenSymbol: lock.tokenSymbol,
+    tokenMin: lock.tokenMin || 1,
+    POAPEventId: lock.POAPEventId,
+    POAPEventName: lock.POAPEventName,
+    step: 1
+  });
 
-  useEffect(() => {
-    GET<NotionGateSettings | null>('/settings')
-      .then(res => {
-        if (res) {
-          const settings: Settings = {
-            createdAt: res.createdAt,
-            spaceIsAdmin: res.spaceIsAdmin,
-            spaceDomain: res.spaceDomain,
-            spaceName: res.spaceName,
-            spaceIcon: res.spaceIcon,
-            spaceId: res.spaceId,
-            // lock settings
-            lockId: res.locks[0].id,
-            lockType: res.locks[0].lockType,
-            addressWhitelist: res.locks[0].addressWhitelist,
-            spaceBlockIds: res.locks[0].spaceBlockIds,
-            spaceBlockUrls: res.locks[0].spaceBlockUrls,
-            spaceDefaultUrl: res.locks[0].spaceDefaultUrl,
-            POAPEventId: res.locks[0].POAPEventId,
-            POAPEventName: res.locks[0].POAPEventName,
-            tokenAddress: res.locks[0].tokenAddress,
-            tokenChainId: res.locks[0].tokenChainId,
-            tokenMin: res.locks[0].tokenMin,
-            tokenName: res.locks[0].tokenName,
-            tokenSymbol: res.locks[0].tokenSymbol,
-          };
-          setForm({ loading: false, step: 0, ...settings });
-        }
-        else {
-          setForm({ loading: false, step: form.spaceDomain ? 2 : 1 });
-        }
-      });
-  }, []);
-
-  useEffect(() => {
-    if (form.step !== -1) {
-      GET('/track/page_view', {
-        title: FORM_STEP_TITLES[form.step]
-      });
-    }
-  }, [form.step]);
+  // useEffect(() => {
+  //   if (form.step !== -1) {
+  //     GET('/track/page_view', {
+  //       title: FORM_STEP_TITLES[form.step]
+  //     });
+  //   }
+  // }, [form.step]);
 
 
-  function saveSettings (settings: Settings) {
-    setForm({ saving: true });
-    const gateSettings = {
-      spaceDomain: settings.spaceDomain,
-      spaceIcon: settings.spaceIcon,
-      spaceId: settings.spaceId,
-      spaceName: settings.spaceName,
-    };
+  function saveLock (_form: TokenFormFields) {
+    setForm({ ..._form, saving: true });
     const lockSettings = {
-      lockType: settings.lockType,
-      addressWhitelist: settings.addressWhitelist,
-      POAPEventId: settings.POAPEventId,
-      POAPEventName: settings.POAPEventName,
-      spaceBlockIds: settings.spaceBlockIds,
-      spaceBlockUrls: settings.spaceBlockUrls,
-      spaceDefaultUrl: settings.spaceDefaultUrl,
-      tokenAddress: settings.tokenAddress,
-      tokenChainId: settings.tokenChainId,
-      tokenMin: settings.tokenMin,
-      tokenName: settings.tokenName,
-      tokenSymbol: settings.tokenSymbol,
+      spaceBlockIds: form.spaceBlockIds,
+      spaceBlockUrls: form.spaceBlockUrls,
+      spaceDefaultUrl: form.spaceDefaultUrl,
+      lockType: _form.lockType,
+      addressWhitelist: _form.addressWhitelist,
+      POAPEventId: _form.POAPEventId,
+      POAPEventName: _form.POAPEventName,
+      tokenAddress: _form.tokenAddress,
+      tokenChainId: _form.tokenChainId,
+      tokenMin: _form.tokenMin,
+      tokenName: _form.tokenName,
+      tokenSymbol: _form.tokenSymbol,
     };
-    POST<Omit<NotionGateSettings, 'locks' | 'spaceIsAdmin'>>('/settings', gateSettings)
-      .then (gate => {
-        const req = form.lockId
-          ? PUT<NotionGateSettings>('/settings/locks/' + form.lockId, lockSettings)
-          : POST<NotionGateSettings>('/settings', { gateId: gate.id, ...lockSettings });
-        req
-          .then(settings => {
-            setForm({ ...gate, ...settings, saving: false, step: 0 });
-          })
-          .catch(({ message }) => {
-            setForm({ error: message, saving: false });
-          });
+    const req = form.id
+      ? PUT<NotionGateLock>('/settings/locks/' + form.id, lockSettings)
+      : POST<NotionGateLock>('/settings/locks', { gateId, ...lockSettings });
+    req
+      .then(settings => {
+        onSubmit(settings);
+      })
+      .catch(({ message }) => {
+        setForm({ error: message, saving: false });
       });
   }
 
   function goBack () {
-    setForm({ step: form.step - 1 });
+    setForm({ step: 1 });
   }
 
-  function updateFormAndContinue (_form: Partial<Form>) {
-    setForm({ ..._form, step: form.step + 1 });
-  }
-
-  function saveForm (_form: TokenFormSettings) {
-    setForm(_form);
-    saveSettings({
-      lockId: form.lockId,
-      addressWhitelist: form.addressWhitelist,
-      POAPEventId: _form.POAPEventId,
-      POAPEventName: _form.POAPEventName,
-      spaceBlockIds: form.spaceBlockIds,
-      spaceBlockUrls: form.spaceBlockUrls,
-      spaceDefaultUrl: form.spaceDefaultUrl,
-      spaceDomain: form.spaceDomain,
-      spaceId: form.spaceId,
-      spaceIcon: form.spaceIcon,
-      spaceName: form.spaceName,
-      tokenAddress: _form.tokenAddress,
-      tokenChainId: _form.tokenChainId,
-      tokenMin: _form.tokenMin,
-      lockType: _form.lockType,
-      tokenName: _form.tokenName,
-      tokenSymbol: _form.tokenSymbol,
-    });
+  function setNotionSettings (_form: NotionFormFields) {
+    setForm({ ..._form, step: 2 });
   }
 
   return (
-    <Page title={'Notion Token Gate'}>
-      <PageSection sx={{ py: 6, minHeight: 700 }} width={600}>
-        <Card sx={{ width: '100%' }}>
-          {form.step === 3 && (
-            <NotionPreferencesForm form={form} goBack={goBack} onSubmit={updateFormAndContinue} />
-          )}
-          {form.step === 4 && (
-            <TokenForm form={form} goBack={goBack} onSubmit={saveForm} />
-          )}
-        </Card>
-      </PageSection>
-    </Page>
+    <>
+      {form.step === 1 && (
+        <TokenForm form={form} goBack={goBackParent} onSubmit={saveLock} />
+      )}
+      {form.step === 2 && (
+        <NotionPreferencesForm form={form} hasAdminAccess={hasAdminAccess} goBack={goBack} onSubmit={setNotionSettings} />
+      )}
+    </>
   );
 }
 
@@ -287,12 +211,14 @@ const TabsList = styled(TabsListUnstyled)`
 
 
 
-function NotionPreferencesForm ({ form, goBack, onSubmit }: { form: Settings, goBack: () => void, onSubmit: (form: Pick<Settings, 'spaceBlockIds' | 'spaceBlockUrls' | 'spaceDefaultUrl'>) => void }) {
+type NotionFormFields = Pick<NotionGateLock, 'spaceBlockIds' | 'spaceBlockUrls' | 'spaceDefaultUrl'>;
+
+function NotionPreferencesForm ({ form, hasAdminAccess, goBack, onSubmit }: { form: NotionGateLock, hasAdminAccess: boolean, goBack?: () => void, onSubmit: (form: NotionFormFields) => void }) {
 
   const [spaceBlockIds, setSpaceBlockIds] = useState(form.spaceBlockIds);
   const [spaceBlockUrls, setSpaceBlockUrls] = useState<string>(form.spaceBlockUrls?.join('\n') || '');
   const [defaultUrl, setDefaultUrl] = useState(form.spaceDefaultUrl);
-  const [memberType, setMemberType] = useState((form.spaceBlockIds.length > 0 || !form.spaceIsAdmin) ? 1 : 0);
+  const [memberType, setMemberType] = useState((form.spaceBlockIds.length > 0 || !hasAdminAccess) ? 1 : 0);
 
   const [pages, setPages] = useState<{ id: string, name: string }[]>([{ id: 'a', name: 'test page' }]);
 
@@ -335,15 +261,14 @@ function NotionPreferencesForm ({ form, goBack, onSubmit }: { form: Settings, go
 
   return (<>
     <CardContent sx={{ px: 4, py: 2 }}>
-    <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Step 3 of 4:</Typography>
       <Typography variant='h2' sx={{ fontSize: 18 }}>Configure Notion options</Typography>
     </CardContent>
     <Divider />
     <CardContent sx={{ p: 4 }}>
-      {form.spaceIsAdmin && (<FormLabel component='legend'>New Member Access Level</FormLabel>)}
+      {hasAdminAccess && (<FormLabel component='legend'>New Member Access Level</FormLabel>)}
 
       <TabsUnstyled value={memberType} onChange={changeMemberType}>
-        {form.spaceIsAdmin && (
+        {hasAdminAccess && (
           <TabsList>
             <Tab>
               Team Member<br />
@@ -404,21 +329,24 @@ function NotionPreferencesForm ({ form, goBack, onSubmit }: { form: Settings, go
     </CardContent>
     <Divider />
     <CardContent sx={{ px: 4, py: 2, display: 'flex', justifyContent: 'space-between' }}>
-      <Button variant='outlined' size='large' onClick={goBack}>
-        Back
-      </Button>
+      {goBack
+        ? <Button variant='outlined' size='large' onClick={goBack}>
+          Back
+        </Button>
+        : <div></div>
+      }
       <PrimaryButton disabled={memberType === 1 && spaceBlockIds.length === 0} variant='outlined' size='large' onClick={saveNotion}>
-        Continue
+        {form.id ? 'Save' : 'Create'}
       </PrimaryButton>
     </CardContent>
   </>);
 }
 
-type TokenFormSettings = Pick<Settings, 'POAPEventName' | 'POAPEventId' | 'tokenChainId' | 'tokenAddress' | 'tokenName' | 'tokenSymbol' | 'lockType' | 'tokenMin'>;
+type TokenFormFields = Pick<NotionGateLock, 'addressWhitelist' | 'POAPEventName' | 'POAPEventId' | 'tokenChainId' | 'tokenAddress' | 'tokenName' | 'tokenSymbol' | 'lockType' | 'tokenMin'>;
 
-function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void, onSubmit: (form: TokenFormSettings) => void }) {
+function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack?: () => void, onSubmit: (form: TokenFormFields) => void }) {
 
-  const [isValidContract, setIsValidContract] = useLoadingState({ valid: false });
+  const [isValidContract, setIsValidContract] = useLoadingState<{ loading: boolean, valid: boolean }>({ loading: false, valid: false });
   const [values, setValues] = useFormState<Form>({
     tokenName: '',
     tokenSymbol: '',
@@ -446,7 +374,10 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
     }
   }
 
-  const onContractChange = debounce(function (_values: TokenFormSettings) {
+  const onContractChange = debounce(function (_values: TokenFormFields) {
+    if (!_values.tokenAddress) {
+      return;
+    }
     setIsValidContract({ loading: true });
     GET<{ tokenName: string, tokenSymbol: string }>('/blockchain/getContract', {
       tokenAddress: _values.tokenAddress,
@@ -470,28 +401,17 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
 
   return (<>
     <CardContent sx={{ px: 4, py: 2 }}>
-    <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Step 4 of 4:</Typography>
       <Typography  variant='h2' sx={{ fontSize: 18 }}>Enter Access Criteria</Typography>
     </CardContent>
     <Divider />
     <CardContent sx={{ p: 4 }}>
-      <FormLabel>Token type</FormLabel>
-      <FormControl sx={{ width: '100%' }}>
-        <Select
-          size='small'
-          name='lockType'
-          value={values.lockType}
-          onChange={updateValues}
-        >
-          {lockTypes.map(option => (
-            <MenuItem key={option.id} value={option.id}>{option.name}</MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      <br /><br />
 
+      <FormLabel>Chain</FormLabel>
+      {values.lockType === 'POAP' && <>
+        <Typography>Works on both ETHEREUM and XDAI</Typography>
+        <Divider sx={{ my: 2 }} />
+      </>}
       {values.lockType !== 'POAP' && (<>
-        <FormLabel>Blockchain</FormLabel>
         <FormControl sx={{ width: '100%' }}>
           <Select
             size='small'
@@ -573,14 +493,14 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack: () => void
       </CardContent>
     )}
     <CardContent sx={{ px: 4, py: 2, display: 'flex', justifyContent: 'space-between' }}>
-      <Button variant='outlined' size='large' onClick={goBack}>
+      {goBack ? <Button variant='outlined' size='large' onClick={goBack}>
         Back
-      </Button>
+      </Button> : <div></div>}
       <PrimaryButton
         disabled={(values.lockType === 'POAP' ? !values.POAPEventId : (!values.tokenAddress || !values.lockType || !values.tokenChainId))}
         loading={form.saving}
         variant='outlined' size='large' onClick={submitForm}>
-        {form.createdAt ? 'Save' : 'Create'}
+        Continue
       </PrimaryButton>
     </CardContent>
   </>);

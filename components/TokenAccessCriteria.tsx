@@ -1,12 +1,26 @@
 
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
+import Tooltip from '@mui/material/Tooltip';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import IconButton from '@mui/material/IconButton';
 import { NotionGateLock } from '../api';
 import { getContractUrl } from '../lib/blockchain';
 import BlockchainLogo from './BlockchainLogo';
 
-export default function TokenAccessCriteria ({ POAPEventName, tokenChainId, tokenAddress, tokenMin, tokenName, lockType, tokenSymbol }: Pick<NotionGateLock, 'POAPEventName' | 'tokenChainId' | 'tokenAddress' | 'lockType' | 'tokenMin' | 'tokenName' | 'tokenSymbol'>) {
+type Props = Pick<NotionGateLock, 'POAPEventName' | 'tokenChainId' | 'tokenAddress' | 'lockType' | 'tokenMin' | 'tokenName' | 'tokenSymbol'>;
+
+export default function TokenAccessCriteria ({ POAPEventName, tokenChainId, tokenAddress, tokenMin, tokenName, lockType, tokenSymbol, onEdit, onDelete }: Props & { onDelete?: () => void, onEdit?: () => void }) {
+
   const contractUrl = getContractUrl(tokenChainId, tokenAddress);
+
+  function confirmDeleteLock () {
+    if (confirm('Remove this criteria?')) {
+      onDelete();
+    }
+  }
+
   return (
     <Box
       sx={{
@@ -31,13 +45,27 @@ export default function TokenAccessCriteria ({ POAPEventName, tokenChainId, toke
       }}>
         <BlockchainLogo chainId={tokenChainId} />
       </Box>
-
-      {lockType === 'ERC721'
-        ? <span>Own at least <strong>{tokenMin} <Link href={contractUrl} target='_blank'>{tokenName}</Link> NFT</strong></span>
-        : (lockType === 'ERC20'
-          ? <span>Hold at least <strong>{tokenMin} <Link href={contractUrl} target='_blank'>${tokenSymbol}</Link></strong></span>
-          : <span>Hold a <strong>{POAPEventName}</strong> POAP</span>)
-      }
+      <Box display='flex' justifyContent='space-between' alignItems='center'>
+        <div></div>
+        {lockType === 'ERC721'
+          ? <span>Hold {tokenMin > 1 ? 'at least ' + tokenMin : 'one'} <strong> <Link href={contractUrl} target='_blank'>{tokenName}</Link> NFT</strong></span>
+          : (lockType === 'ERC20'
+            ? <span>Hold {tokenMin > 1 ? 'at least' : 'a'} <strong>{tokenMin} <Link href={contractUrl} target='_blank'>${tokenSymbol}</Link></strong></span>
+            : <span>Hold a <strong>{POAPEventName}</strong> POAP</span>)
+        }
+        {onEdit && <Box sx={{ minWidth: 80 }}>
+          <Tooltip arrow placement='top' title='Edit criteria'>
+            <IconButton onClick={onEdit}>
+              <EditIcon fontSize='small' sx={{ color: '#aaa' }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip arrow placement='top' title='Delete criteria'>
+            <IconButton onClick={confirmDeleteLock}>
+              <DeleteIcon fontSize='small' sx={{ color: '#aaa' }} />
+            </IconButton>
+          </Tooltip>
+        </Box>}
+      </Box>
     </Box>
   );
 }

@@ -1,8 +1,15 @@
 
 export const VALID_CHAIN_IDS = [1, 4, 137, 80001] as const;
-export const VALID_TOKEN_TYPES = ['ERC721', 'ERC20'] as const;
+export const VALID_LOCK_TYPES = ['ERC721', 'ERC20', 'POAP', 'whitelist'] as const;
 export type ChainId = typeof VALID_CHAIN_IDS[number];
-export type TokenType = typeof VALID_TOKEN_TYPES[number];
+export type LockType = typeof VALID_LOCK_TYPES[number];
+
+export const LOCK_TYPES: { id: LockType, name: string, label: string }[] = [
+  { id: 'ERC721', name: 'ERC-721', label: 'Hold an NFT' },
+  { id: 'ERC20', name: 'ERC-20', label: 'Hold a Token' },
+  { id: 'POAP', name: 'POAP', label: 'Hold a POAP' }
+];
+
 
 export const SUPPORTED_BLOCKCHAINS = [
   { id: 1, name: 'Ethereum Mainnet' },

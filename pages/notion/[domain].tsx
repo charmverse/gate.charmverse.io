@@ -17,7 +17,7 @@ import SwapHorizIcon from '@mui/icons-material/ArrowRightAlt';
 import { PageSection } from '../../layouts/Page';
 import styled from '@emotion/styled';
 import { useLoadingState } from '../../lib/react';
-import { POST, GET } from '../../lib/http';
+import { POST, GET } from '../../lib/http/browser';
 import debounce from '../../lib/debounce';
 import WalletConnectButton from '../../components/WalletConnectButton';
 import BlockchainLogo from '../../components/BlockchainLogo';

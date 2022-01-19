@@ -1,20 +1,19 @@
 
 import { useEffect, useState } from 'react';
 import Typography from '@mui/material/Typography';
-import { buttonUnstyledClasses, Card, CardContent, CircularProgress, Divider, FormControlLabel, FormHelperText, FormLabel, Grid, IconButton, Radio, RadioGroup, SelectChangeEvent } from '@mui/material';
+import { CardContent, Divider, FormHelperText, FormLabel, Grid, IconButton, Radio, RadioGroup, SelectChangeEvent } from '@mui/material';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import { useFormState, useLoadingState } from '../../lib/react';
-import { POST, GET, DELETE, PUT } from '../../lib/http';
-import Page, { PageSection } from '../../layouts/Page';
+import { POST, GET } from '../../lib/http/browser';
 import Button from '../Button';
 import NotionSpaceIcon from '../NotionSpaceIcon';
 import TrimmedContent from '../TrimmedContent';
 import PrimaryButton from '../PrimaryButton';
 import InputLoadingIcon from '../InputLoadingIcon';
-import { LockType, NotionGateSettings } from '../../api';
+import { NotionGateSettings } from '../../api';
 
 
 interface Space {
@@ -25,30 +24,8 @@ interface Space {
   name: string;
 }
 
-// TODO: Delete this and rely on NotionGateSettings instead
-interface Settings {
-  createdAt?: string;
-  lockId?: string;
-  addressWhitelist: string[];
-  spaceIsAdmin?: boolean;
-  spaceBlockIds: string[];
-  spaceBlockUrls: string[];
-  spaceDefaultUrl?: string;
-  spaceDomain: string;
-  spaceName: string;
-  spaceIcon: string;
-  spaceId: string;
-  POAPEventId?: number;
-  POAPEventName?: string;
-  tokenAddress: string;
-  tokenChainId: number;
-  tokenName: string;
-  tokenSymbol: string;
-  tokenMin: number
-  lockType: LockType;
-}
 
-interface Form extends Settings {
+interface Form extends NotionGateSettings {
   step: number;
   error?: string;
   saving?: boolean;
@@ -61,123 +38,64 @@ interface User {
 }
 
 
-const FORM_STEP_TITLES = {
-  0: 'Settings Home: Gate summary',
-  1: 'Settings 1/4: Set Notion domain',
-  2: 'Settings 2/4: Add CharmVerse admin',
-  3: 'Settings 3/4: Set Notion preferences',
-  4: 'Settings 4/4: Set token criteria'
-}
+export default function NotionGateForm ({ gate, onSubmit }: { gate?: NotionGateSettings, onSubmit: (settings: NotionGateSettings) => void }) {
 
-export default function SettingsPage () {
+  const [form, setForm] = useFormState<Form>({
+    spaceDomain: gate?.spaceDomain,
+    spaceIcon: gate?.spaceIcon,
+    spaceId: gate?.spaceId,
+    spaceName: gate?.spaceName,
+    step: 1
+  });
 
-  const [form, setForm] = useFormState<Form>({ spaceBlockIds: [], spaceBlockUrls: [], step: -1 });
+  // useEffect(() => {
+  //   if (form.step !== -1) {
+  //     GET('/track/page_view', {
+  //       title: FORM_STEP_TITLES[form.step]
+  //     });
+  //   }
+  // }, [form.step]);
 
-  useEffect(() => {
-    GET<NotionGateSettings | null>('/settings')
-      .then(res => {
-        if (res) {
-          const settings: Settings = {
-            createdAt: res.createdAt,
-            spaceIsAdmin: res.spaceIsAdmin,
-            spaceDomain: res.spaceDomain,
-            spaceName: res.spaceName,
-            spaceIcon: res.spaceIcon,
-            spaceId: res.spaceId,
-            // lock settings
-            lockId: res.locks[0].id,
-            lockType: res.locks[0].lockType,
-            addressWhitelist: res.locks[0].addressWhitelist,
-            spaceBlockIds: res.locks[0].spaceBlockIds,
-            spaceBlockUrls: res.locks[0].spaceBlockUrls,
-            spaceDefaultUrl: res.locks[0].spaceDefaultUrl,
-            POAPEventId: res.locks[0].POAPEventId,
-            POAPEventName: res.locks[0].POAPEventName,
-            tokenAddress: res.locks[0].tokenAddress,
-            tokenChainId: res.locks[0].tokenChainId,
-            tokenMin: res.locks[0].tokenMin,
-            tokenName: res.locks[0].tokenName,
-            tokenSymbol: res.locks[0].tokenSymbol,
-          };
-          setForm({ loading: false, step: 0, ...settings });
-        }
-        else {
-          setForm({ loading: false, step: form.spaceDomain ? 2 : 1 });
-        }
-      });
-  }, []);
-
-  useEffect(() => {
-    if (form.step !== -1) {
-      GET('/track/page_view', {
-        title: FORM_STEP_TITLES[form.step]
-      });
-    }
-  }, [form.step]);
-
-
-  function saveSettings (settings: Settings) {
-    setForm({ saving: true });
-    const gateSettings = {
-      spaceDomain: settings.spaceDomain,
-      spaceIcon: settings.spaceIcon,
-      spaceId: settings.spaceId,
-      spaceName: settings.spaceName,
-    };
-    const lockSettings = {
-      lockType: settings.lockType,
-      addressWhitelist: settings.addressWhitelist,
-      POAPEventId: settings.POAPEventId,
-      POAPEventName: settings.POAPEventName,
-      spaceBlockIds: settings.spaceBlockIds,
-      spaceBlockUrls: settings.spaceBlockUrls,
-      spaceDefaultUrl: settings.spaceDefaultUrl,
-      tokenAddress: settings.tokenAddress,
-      tokenChainId: settings.tokenChainId,
-      tokenMin: settings.tokenMin,
-      tokenName: settings.tokenName,
-      tokenSymbol: settings.tokenSymbol,
-    };
-    POST<Omit<NotionGateSettings, 'locks' | 'spaceIsAdmin'>>('/settings', gateSettings)
-      .then (gate => {
-        const req = form.lockId
-          ? PUT<NotionGateSettings>('/settings/locks/' + form.lockId, lockSettings)
-          : POST<NotionGateSettings>('/settings', { gateId: gate.id, ...lockSettings });
-        req
-          .then(settings => {
-            setForm({ ...gate, ...settings, saving: false, step: 0 });
-          })
-          .catch(({ message }) => {
-            setForm({ error: message, saving: false });
-          });
-      });
-  }
 
   function goBack () {
-    setForm({ step: form.step - 1 });
+    setForm({ step: 1 });
   }
 
-  function updateFormAndContinue (_form: Partial<Form>) {
-    setForm({ ..._form, step: form.step + 1 });
+  function setDomain (_form: DomainFormFields) {
+    setForm({ ..._form, step: 2 });
   }
 
-  return (
-    <Page title={'Notion Token Gate'}>
-      <PageSection sx={{ py: 6, minHeight: 700 }} width={600}>
-        <Card sx={{ width: '100%' }}>
-          {form.step === 1 && (
-            <NotionForm form={form} goBack={goBack} onSubmit={updateFormAndContinue} />
-          )}
-          {form.step === 2 && (
-            <NotionValidateForm form={form} goBack={goBack} onSubmit={updateFormAndContinue} />
-          )}
-        </Card>
-      </PageSection>
-    </Page>
+  function saveSettings (_form: FormFields) {
+    setForm({ ..._form, saving: true });
+    const gateSettings = {
+      spaceDomain: _form.spaceDomain,
+      spaceIcon: _form.spaceIcon,
+      spaceId: _form.spaceId,
+      spaceName: _form.spaceName,
+    };
+    POST<NotionGateSettings>('/settings', gateSettings)
+      .then (gate => {
+        onSubmit(gate);
+      })
+      .catch(({ message }) => {
+        setForm({ error: message, saving: false });
+      });;
+  }
+
+  return (<>
+      {form.step === 1 && (
+        <DomainForm form={form} goBack={goBack} onSubmit={setDomain} />
+      )}
+      {form.step === 2 && (
+        <ValidateAccessForm form={form} goBack={goBack} onSubmit={saveSettings} />
+      )}
+    </>
   );
 }
 
-function NotionForm ({ form, goBack, onSubmit }: { form: Settings, goBack: () => void, onSubmit: (form: Pick<Settings, 'spaceDomain' | 'spaceId'>) => void }) {
+type DomainFormFields = Pick<NotionGateSettings, 'spaceDomain' | 'spaceId'>;
+
+function DomainForm ({ form, goBack, onSubmit }: { form: NotionGateSettings, goBack: () => void, onSubmit: (form: DomainFormFields) => void }) {
   const [spaceDomain, setSpace] = useState<string>(form.spaceDomain);
 
   function saveNotion () {
@@ -198,7 +116,7 @@ function NotionForm ({ form, goBack, onSubmit }: { form: Settings, goBack: () =>
   return (<>
     <CardContent sx={{ px: 4, py: 2 }}>
       {/* <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Step 1 of 4:</Typography> */}
-      <Typography variant='h2' sx={{ fontSize: 18 }}>1. Enter your Notion workspace domain</Typography>
+      <Typography variant='h2' sx={{ fontSize: 18 }}>Enter your Notion workspace domain</Typography>
     </CardContent>
     <Divider />
     <CardContent sx={{ p: 4 }}>
@@ -237,8 +155,9 @@ function NotionForm ({ form, goBack, onSubmit }: { form: Settings, goBack: () =>
   </>);
 }
 
+type FormFields = Pick<NotionGateSettings, 'spaceId' | 'spaceIsAdmin' | 'spaceDomain' | 'spaceIcon' | 'spaceName'>;
 
-function NotionValidateForm ({ form, goBack, onSubmit }: { form: Settings, goBack: () => void, onSubmit: (form: Pick<Settings, 'spaceId' | 'spaceIsAdmin' | 'spaceDomain' | 'spaceIcon' | 'spaceName'>) => void }) {
+function ValidateAccessForm ({ form, goBack, onSubmit }: { form: NotionGateSettings, goBack: () => void, onSubmit: (form: FormFields) => void }) {
   const [space, setSpace] = useLoadingState<{ error: string, value?: { spaceId: string, spaceIsAdmin: boolean, spaceIcon: string, spaceName: string, spaceDomain: string } | null }>({
     loading: true,
     error: '',
@@ -276,7 +195,7 @@ function NotionValidateForm ({ form, goBack, onSubmit }: { form: Settings, goBac
   return (<>
     <CardContent sx={{ px: 4, py: 2 }}>
     {/* <Typography gutterBottom variant='h2' sx={{ fontSize: 14 }}>Step 2 of 4:</Typography> */}
-      <Typography variant='h2' sx={{ fontSize: 18 }}>2. Enable CharmVerse to manage users</Typography>
+      <Typography variant='h2' sx={{ fontSize: 18 }}>Enable CharmVerse to manage users</Typography>
     </CardContent>
     <Divider />
     <CardContent sx={{ p: 4, py: 2 }}>
@@ -315,13 +234,8 @@ function NotionValidateForm ({ form, goBack, onSubmit }: { form: Settings, goBac
         Back
       </Button>
       <PrimaryButton disabled={!space.value} variant='outlined' size='large' onClick={saveNotion}>
-        Continue
+        Save
       </PrimaryButton>
     </CardContent>
   </>);
-}
-
-// from notional library
-function toUUID (input: string) {
-  return input.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
 }
