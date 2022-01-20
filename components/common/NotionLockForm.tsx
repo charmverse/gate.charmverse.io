@@ -102,21 +102,21 @@ export default function NotionLockForm ({ gateId, hasAdminAccess, lock, goBack: 
   // }, [form.step]);
 
 
-  function saveLock (_form: TokenFormFields) {
+  function saveNotionForm (_form: NotionFormFields) {
     setForm({ ..._form, saving: true });
     const lockSettings = {
-      spaceBlockIds: form.spaceBlockIds,
-      spaceBlockUrls: form.spaceBlockUrls,
-      spaceDefaultUrl: form.spaceDefaultUrl,
-      lockType: _form.lockType,
-      addressWhitelist: _form.addressWhitelist,
-      POAPEventId: _form.POAPEventId,
-      POAPEventName: _form.POAPEventName,
-      tokenAddress: _form.tokenAddress,
-      tokenChainId: _form.tokenChainId,
-      tokenMin: _form.tokenMin,
-      tokenName: _form.tokenName,
-      tokenSymbol: _form.tokenSymbol,
+      spaceBlockIds: _form.spaceBlockIds,
+      spaceBlockUrls: _form.spaceBlockUrls,
+      spaceDefaultUrl: _form.spaceDefaultUrl,
+      lockType: form.lockType,
+      addressWhitelist: form.addressWhitelist,
+      POAPEventId: form.POAPEventId,
+      POAPEventName: form.POAPEventName,
+      tokenAddress: form.tokenAddress,
+      tokenChainId: form.tokenChainId,
+      tokenMin: form.tokenMin,
+      tokenName: form.tokenName,
+      tokenSymbol: form.tokenSymbol,
     };
     const req = form.id
       ? PUT<NotionGateLock>('/settings/locks/' + form.id, lockSettings)
@@ -134,17 +134,17 @@ export default function NotionLockForm ({ gateId, hasAdminAccess, lock, goBack: 
     setForm({ step: 1 });
   }
 
-  function setNotionSettings (_form: NotionFormFields) {
+  function saveTokenForm (_form: TokenFormFields) {
     setForm({ ..._form, step: 2 });
   }
 
   return (
     <>
       {form.step === 1 && (
-        <TokenForm form={form} goBack={goBackParent} onSubmit={saveLock} />
+        <TokenForm form={form} goBack={goBackParent} onSubmit={saveTokenForm} />
       )}
       {form.step === 2 && (
-        <NotionPreferencesForm form={form} hasAdminAccess={hasAdminAccess} goBack={goBack} onSubmit={setNotionSettings} />
+        <NotionPreferencesForm form={form} hasAdminAccess={hasAdminAccess} goBack={goBack} onSubmit={saveNotionForm} />
       )}
     </>
   );
@@ -243,7 +243,7 @@ function NotionPreferencesForm ({ form, hasAdminAccess, goBack, onSubmit }: { fo
     const blockIds = e.target.value.split(/(\s+)/).filter(s => s.trim().length > 0).map(url => {
       const id = getBlockIdFromUrl(url);
       return id;
-    });
+    }).flat();
     setSpaceBlockIds(blockIds);
   }
 
@@ -512,13 +512,18 @@ const shortenedContractAddresss = (address: string) => {
 
 
  function getBlockIdFromUrl (url: string) {
-  const parsed = new URL(url);
-  const { pathname, searchParams } = parsed;
-  // if we're looking at a popup
-  if (searchParams.get('p')) {
-    return toUUID(searchParams.get('p')!);
+   try {
+    const parsed = new URL(url);
+    const { pathname, searchParams } = parsed;
+    // if we're looking at a popup
+    if (searchParams.get('p')) {
+      return toUUID(searchParams.get('p')!);
+    }
+    return toUUID(pathname.substring(pathname.length - 32));
   }
-  return toUUID(pathname.substring(pathname.length - 32));
+  catch (e) {
+    return null;
+  }
 }
 
 // from notional library
