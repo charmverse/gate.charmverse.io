@@ -11,8 +11,8 @@ import Chip from '@mui/material/Chip';
 import Modal from '@mui/material/Modal';
 import Avatar from '@mui/material/Avatar';
 import { useLoadingState } from '../lib/react';
-import { GET, DELETE, PUT } from '../lib/http/browser';
-import { GET as ServerGET } from '../lib/http/server';
+import { GET, DELETE } from '../lib/http/browser';
+import { GET as serverGET } from '../lib/http/server';
 import Page, { PageSection } from '../layouts/Page';
 import Button from '../components/Button';
 import TokenAccessCriteria from '../components/TokenAccessCriteria';
@@ -43,7 +43,7 @@ interface User {
 
 
 export const getServerSideProps = async (ctx: GetServerSidePropsContext) => {
-  const gate = await ServerGET(process.env.NEXT_PUBLIC_API + `/settings`, {}, {
+  const gate = await serverGET(process.env.NEXT_PUBLIC_API + `/settings`, {}, {
     headers: {
       // include headers from the client to include auth
       cookie: ctx.req.headers.cookie,
@@ -155,9 +155,10 @@ export default function SettingsPage ({ gateSettings }: { gateSettings: NotionGa
 
         <Typography gutterBottom variant='h6'>Access Criteria</Typography>
 
-        {locks.map(lock => (
+        {locks.map((lock, i) => (<div key={i}>
           <TokenAccessCriteria {...lock} key={lock.id} onDelete={() => deleteLockSettings(lock.id)} onEdit={() => editLockSettings(lock)} />
-        ))}
+          {i < locks.length - 1 && <Box display='flex' justifyContent='center' mb={1}>or</Box>}
+        </div>))}
 
         {locks.length > 0 && <Typography sx={{ mt: 2, mb: 2 }} variant='h2'>Add more</Typography>}
         <Grid container spacing={3}>

@@ -32,7 +32,7 @@ export default function NotionGateView ({ gate, editSettings, deleteSettings }: 
   }
 
   return (
-    <Card sx={{ width: '100%', mb: 3 }}>
+    <Card sx={{ width: '100%', mb: 3, boxShadow: 3 }}>
       <CardContent sx={{ pt: 1, px: 4 }}>
         <Box display='flex' alignItems='center' justifyContent='space-between'>
           <Box display='flex' alignItems='center'>

@@ -70,7 +70,8 @@ export default function WalletConnectButton ({ email, userId, gateChainId, conne
       });
     }
     else {
-      const { signature, error: _error } = await requestSignature(connector, { chainId: gateChainId, email, userId, from: connector.accounts[0] });
+      const chainId = gateChainId || connector.chainId;
+      const { signature, error: _error } = await requestSignature(connector, { chainId, email, userId, from: connector.accounts[0] });
       if (signature) {
         setWallet({ address: connector.accounts[0], chainId: connector.chainId, signature });
       }
@@ -133,7 +134,8 @@ export default function WalletConnectButton ({ email, userId, gateChainId, conne
       .request({ method: 'eth_requestAccounts' })
       .then(async (accounts: string[]) => {
         closeModal();
-        const { signature, error } = await requestSignature(metamask.provider, { chainId: gateChainId, email, userId, from: accounts[0] });
+        const chainId = gateChainId || parseInt(metamask.provider.chainId, 16);
+        const { signature, error } = await requestSignature(metamask.provider, { chainId, email, userId, from: accounts[0] });
         if (signature) {
           setWallet({
             address: accounts[0],
@@ -174,6 +176,11 @@ export default function WalletConnectButton ({ email, userId, gateChainId, conne
       });
   }, []);
 
+  useEffect(() => {
+    console.log('update wlalet state');
+    setWalletError('');
+  }, [walletState]);
+
   if (metamask.loading) {
     return (
         <Button disabled variant='outlined' size='large' sx={{ width: '100%' }}>
@@ -211,7 +218,7 @@ export default function WalletConnectButton ({ email, userId, gateChainId, conne
         )}
         {
           (walletError || walletState.error) && (
-            <FormHelperText error sx={{ marginTop: '1em' }}>{walletError || walletState.error}</FormHelperText>
+            <FormHelperText error sx={{ marginTop: '1em', textAlign: 'center' }}>{walletError || walletState.error}</FormHelperText>
           )
         }
       </Box>
@@ -266,7 +273,8 @@ async function requestSignature (provider: any, { from, email, chainId }: { from
   }
   catch (err) {
     if (err.code === -32603) {
-      return { error: `Please set your active account on the ${getBlockChainName(chainId as ChainId)} blockchain` };
+      console.log("CHAIN ID", chainId)
+      return { error: `Please connect to the ${chainId ? getBlockChainName(chainId as ChainId) : 'Ethereum or xDai'} network` };
     }
     return { error: err.message || err };
   }

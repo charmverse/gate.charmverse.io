@@ -1,7 +1,6 @@
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import NextLink from 'next/link';
-import Link from '@mui/material/Link';
 import styled from '@emotion/styled';
 
 const StyledButton = styled(Button)`
