@@ -43,24 +43,34 @@ interface User {
 
 
 export const getServerSideProps = async (ctx: GetServerSidePropsContext) => {
-  const gate = await serverGET(process.env.NEXT_PUBLIC_API + `/settings`, {}, {
-    headers: {
-      // include headers from the client to include auth
-      cookie: ctx.req.headers.cookie,
+  try {
+    const gate = await serverGET(process.env.NEXT_PUBLIC_API + `/settings`, {}, {
+      headers: {
+        // include headers from the client to include auth
+        cookie: ctx.req.headers.cookie,
+      }
+    })
+    if (!gate) {
+      return {
+        redirect: {
+          destination: '/onboarding',
+        }
+      }
     }
-  });
-  if (!gate) {
+    return {
+      props: {
+        gateSettings: gate
+      }
+    };
+  }
+  // most likely an auth error
+  catch (e) {
     return {
       redirect: {
-        destination: '/onboarding',
+        destination: '/login',
       }
     }
   }
-  return {
-    props: {
-      gateSettings: gate
-    }
-  };
 };
 
 export default function SettingsPage ({ gateSettings }: { gateSettings: NotionGateSettingsWithLocks }) {
