@@ -35,7 +35,7 @@ export default function NotionGateView ({ gate, editSettings, deleteSettings }: 
     <Card sx={{ width: '100%', mb: 3, boxShadow: 3 }}>
       <CardContent sx={{ pt: 1, px: 4 }}>
         <Box display='flex' alignItems='center' justifyContent='space-between'>
-          <Box display='flex' alignItems='center'>
+          <Box display='flex' alignItems='center' py={2}>
             <NotionSpaceIcon src={gate.spaceIcon} />
             <Link href={notionUrl} target='_blank' sx={{ color: 'inherit', fontSize: 24, fontWeight: 'bold', ml: 2 }}>
               {gate.spaceName}

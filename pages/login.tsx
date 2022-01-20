@@ -4,7 +4,6 @@ import { useUser } from '@auth0/nextjs-auth0';
 import styled from '@emotion/styled';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
-import Copyright from '../components/Copyright';
 import PrimaryButton from '../components/PrimaryButton';
 import Link from '@mui/material/Link';
 import EmailIcon from '@mui/icons-material/MailOutline';

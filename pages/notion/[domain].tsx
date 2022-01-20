@@ -4,7 +4,6 @@ import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '../../components/Button';
-import LoadingComponent from '../../components/LoadingComponent';
 import Copyright from '../../components/Copyright';
 import PrimaryButton from '../../components/PrimaryButton';
 import NotionSpaceIcon from '../../components/NotionSpaceIcon';
@@ -26,7 +25,6 @@ import { getCookie, setCookie } from '../../lib/browser';
 
 import TokenAccessCriteria from '../../components/TokenAccessCriteria';
 import { blueColor } from '../../theme/colors';
-import { useRouter } from 'next/router';
 import { NotionGateLock } from '../../api';
 import { GetServerSidePropsContext } from 'next';
 
