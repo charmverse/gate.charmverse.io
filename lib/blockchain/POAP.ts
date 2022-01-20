@@ -1,4 +1,4 @@
-import { GET } from '../http';
+import { GET } from '../http/browser';
 
 const POAP_API_URL = 'https://api.poap.xyz';
 

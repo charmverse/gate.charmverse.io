@@ -17,7 +17,8 @@ import SwapHorizIcon from '@mui/icons-material/ArrowRightAlt';
 import { PageSection } from '../../layouts/Page';
 import styled from '@emotion/styled';
 import { useLoadingState } from '../../lib/react';
-import { POST, GET } from '../../lib/http';
+import { POST, GET } from '../../lib/http/browser';
+import { GET as serverGET } from '../../lib/http/server';
 import debounce from '../../lib/debounce';
 import WalletConnectButton from '../../components/WalletConnectButton';
 import BlockchainLogo from '../../components/BlockchainLogo';
@@ -27,6 +28,7 @@ import TokenAccessCriteria from '../../components/TokenAccessCriteria';
 import { blueColor } from '../../theme/colors';
 import { useRouter } from 'next/router';
 import { NotionGateLock } from '../../api';
+import { GetServerSidePropsContext } from 'next';
 
 const Logo = styled.img`
   border-radius: 50%;
@@ -56,9 +58,27 @@ interface Gate {
   locks: Pick<NotionGateLock, 'POAPEventName' | 'tokenChainId' | 'tokenAddress' | 'lockType' | 'tokenMin' | 'tokenName' | 'tokenSymbol'>[];
 }
 
-export default function TokenGate () {
+export const getServerSideProps = async (ctx: GetServerSidePropsContext) => {
+  console.log(ctx.req.url);
+  const domain = ctx.req.url.split('/').pop();
+  console.log('domain', domain)
+  const { gate } = await serverGET(process.env.NEXT_PUBLIC_API + `/gate`, { domain });
+  if (!gate) {
+    return {
+      notFound: true
+    };
+  }
+  console.log('gate', gate);
+  return {
+    props: {
+      gate
+    }
+  };
+};
 
-  const { query } = useRouter();
+export default function TokenGate ({ gate }: { gate: any }) {
+
+  const [activeLock, setActiveLock] = useState<NotionGateLock>(gate.locks[0]);
   const emailFromCookie = getCookie(EMAIL_COOKIE);
   const [saving, setSaving] = useState(false);
   const [accountAddress, setAccountAddress] = useState<string | null>(null);
@@ -66,26 +86,17 @@ export default function TokenGate () {
   const [signature, setSignature] = useState<string | null>(null);
   const [walletState, setWalletState] = useLoadingState<{ address?: string, approved: boolean, connected: boolean, signature?: string, error: string }>({ approved: false, connected: false, loading: false, error: '' });
   const [emailState, setEmailState] = useLoadingState<{ valid?: boolean, email?: string, notionUserId?: string }>({ email: emailFromCookie, loading: false });
-  const [gate, setGate] = useLoadingState<{ data: Gate | null }>({ data: null });
 
-  const { spaceDomain, spaceName, spaceIcon } = (gate.data || {});
-
-  useEffect(() => {
-    GET<{ gate: any }>('/gate', { domain: query.domain }).then(({ gate }) => {
-      setGate({ data: gate, loading: false });
-    }).catch(error => {
-      console.error('Error requesting token gate', error);
-      window.location.href = '/404';
-    });
-  }, []);
+  const { spaceDomain, spaceName, spaceIcon } = (gate || {});
 
   useEffect(() => {
-    if (accountAddress && accountChainId) {
+    if (activeLock && accountAddress && accountChainId) {
       setWalletState({ address: accountAddress, loading: true, approved: false, connected: false, error: '' });
       GET<{ approved: boolean, connected: boolean, error?: string }>('/notion/connect', {
         address: accountAddress,
         chainId: accountChainId,
-        domain: spaceDomain
+        domain: spaceDomain,
+        lockId: activeLock.id,
       }).then(({ approved, connected, error }) => {
         setWalletState({ loading: false, approved, connected, error: error || '' });
       });
@@ -93,11 +104,14 @@ export default function TokenGate () {
     else {
       setWalletState({ address: '', loading: false, approved: false, connected: false, error: '' });
     }
+  }, [accountAddress, accountChainId, activeLock]);
+
+  useEffect(() => {
     // check email on page load if we have a cookie
-    if (emailState.email) {
-      checkEmail(emailState.email);
+    if (emailFromCookie) {
+      checkEmail(emailFromCookie);
     }
-  }, [accountAddress, accountChainId]);
+  }, [emailFromCookie]);
 
   function connectWallet (account: { address: string, chainId: number, signature?: string }) {
     setAccountAddress(account.address);
@@ -139,6 +153,7 @@ export default function TokenGate () {
         chainId: accountChainId,
         domain: spaceDomain,
         email: emailState.email,
+        lockId: activeLock.id,
         notionUserId: emailState.notionUserId,
         signature,
       }).then(connectState => {
@@ -152,12 +167,14 @@ export default function TokenGate () {
     }
   }
 
-  if (!gate.data) {
-    return <LoadingComponent height={'600px'} isLoading={true} />;
+  function onSelectLock (lock: NotionGateLock) {
+    setActiveLock(lock);
   }
 
+  const allowSelectCriteria = !!(gate.locks.length > 1);
+
   const workspaceUrl = `https://notion.so/${spaceDomain}`;
-  const notionLandingPage = gate.data.spaceDefaultUrl || workspaceUrl;
+  const notionLandingPage = gate.spaceDefaultUrl || workspaceUrl;
 
   return (
     <>
@@ -167,7 +184,7 @@ export default function TokenGate () {
       <Box sx={{ background: 'white', py: 5 }}>
         <Box pb={3}  display='flex' alignItems='center' justifyContent='center'>
           <LockContainer style={{ border: '1px solid #ccc', marginRight: '.5em' }}>
-            <BlockchainLogo chainId={gate.data.locks[0].tokenChainId} width={36} />
+            <BlockchainLogo chainId={gate.locks[0].tokenChainId} width={36} />
           </LockContainer>
           <SwapHorizIcon sx={{ color: '#aaa' }} />
           <LockContainer style={{ background: blueColor, color: 'white', height: '48px', width: '48px', margin: '0 .5em' }}>
@@ -186,8 +203,15 @@ export default function TokenGate () {
             CharmVerse grants access to this Notion workspace by associating your Notion account with your crypto wallet. Your wallet must meet the criteria below.
           </Typography>
           <br />
-          <Typography gutterBottom variant='h2' sx={{ fontSize: 14, color: 'rgba(0, 0, 0, 0.6)' }}>Access Criteria</Typography>
-          <TokenAccessCriteria {...gate.data.locks[0]} />
+          <Typography gutterBottom sx={{ fontSize: 14, color: 'rgba(0, 0, 0, 0.6)' }}>
+            {allowSelectCriteria ? 'Select an ' : ''}Access Criteria:
+          </Typography>
+            {gate.locks.map((lock, i) => (
+              <div key={i}>
+                <TokenAccessCriteria {...lock} onClick={() => onSelectLock(lock)} selected={activeLock === lock} selectable={allowSelectCriteria} />
+                {i < gate.locks.length - 1 && <Box display='flex' justifyContent='center' mb={1}>or</Box>}
+              </div>
+            ))}
         </Box>
         <Card sx={{ width: '100%', boxShadow: 3 }}>
           <CardContent sx={{ p: 4 }}>
@@ -222,7 +246,7 @@ export default function TokenGate () {
               />
               {(emailState.notionUserId || walletState.address) && <>
                 <Typography gutterBottom variant='h2' sx={{ fontSize: 18, my: 2 }}>Step 2. Connect to a wallet</Typography>
-                <WalletConnectButton email={emailState.email} userId={emailState.notionUserId} gateChainId={gate.data.locks[0].tokenChainId} connect={connectWallet} walletState={walletState} />
+                <WalletConnectButton email={emailState.email} userId={emailState.notionUserId} gateChainId={gate.locks[0].tokenChainId} connect={connectWallet} walletState={walletState} />
               </>}
             </Box>
           </CardContent>

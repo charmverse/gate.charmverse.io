@@ -66,11 +66,11 @@ const POAPSelect: FC<Props> = (props) => {
       renderOption={(props, option) => [props, option]}
       onChange={(e, newValue) => onChange(newValue as { id: number, label: string })}
       options={POAPEvents.data}
-      sx={{ maxWidth: 300 }}
+      sx={{ minWidth: 300 }}
       renderInput={(params) => (
         // @ts-ignore
         <Tooltip placement='top' arrow title={params.inputProps.value}>
-          <TextField {...params} InputProps={{ ...params.InputProps, endAdornment: <InputLoadingIcon loading={POAPEvents.loading} /> }} />
+          <TextField {...params} InputProps={{ ...params.InputProps, placeholder: 'Type to search', endAdornment: <InputLoadingIcon loading={POAPEvents.loading} /> }} />
         </Tooltip>
       )}
 
