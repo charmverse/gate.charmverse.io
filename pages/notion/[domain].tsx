@@ -169,6 +169,7 @@ export default function TokenGate ({ gate }: { gate: any }) {
 
   function onSelectLock (lock: NotionGateLock) {
     setActiveLock(lock);
+    console.log('set active', lock);
   }
 
   const allowSelectCriteria = !!(gate.locks.length > 1);
@@ -246,7 +247,7 @@ export default function TokenGate ({ gate }: { gate: any }) {
               />
               {(emailState.notionUserId || walletState.address) && <>
                 <Typography gutterBottom variant='h2' sx={{ fontSize: 18, my: 2 }}>Step 2. Connect to a wallet</Typography>
-                <WalletConnectButton email={emailState.email} userId={emailState.notionUserId} gateChainId={gate.locks[0].tokenChainId} connect={connectWallet} walletState={walletState} />
+                <WalletConnectButton email={emailState.email} userId={emailState.notionUserId} chainId={activeLock.tokenChainId} connect={connectWallet} walletState={walletState} />
               </>}
             </Box>
           </CardContent>

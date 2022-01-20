@@ -39,7 +39,7 @@ const ModalBox = styled(Box)`
   border-radius: 20px;
 `;
 
-export default function WalletConnectButton ({ email, userId, gateChainId, connect: setWallet, walletState }: { email: string, userId: string, gateChainId: number, connect: (a: { address: string, chainId: number, signature?: string }) => void, walletState: WalletState }) {
+export default function WalletConnectButton ({ email, userId, chainId, connect: setWallet, walletState }: { email: string, userId: string, chainId?: number, connect: (a: { address: string, chainId: number, signature?: string }) => void, walletState: WalletState }) {
 
   const [metamask, setProviderState] = useLoadingState<{ provider: any }>({});
   const [walletError, setWalletError] = useState<string>('');
@@ -66,12 +66,12 @@ export default function WalletConnectButton ({ email, userId, gateChainId, conne
     if (!connector.connected) {
       // passing chainId doesnt affect metamask but might be useful for others
       await connector.createSession({
-        chainId: gateChainId,
+        chainId,
       });
     }
     else {
-      const chainId = gateChainId || connector.chainId;
-      const { signature, error: _error } = await requestSignature(connector, { chainId, email, userId, from: connector.accounts[0] });
+      const chainIdToRequest = chainId || connector.chainId;
+      const { signature, error: _error } = await requestSignature(connector, { chainId: chainIdToRequest, email, userId, from: connector.accounts[0] });
       if (signature) {
         setWallet({ address: connector.accounts[0], chainId: connector.chainId, signature });
       }
@@ -90,8 +90,7 @@ export default function WalletConnectButton ({ email, userId, gateChainId, conne
       // Get provided accounts and chainId
       const { accounts, chainId } = payload.params[0];
       if (accounts[0]) {
-        console.log('requestSignature: connector.on(connect');
-        const { signature, error } = await requestSignature(connector, { chainId: gateChainId, email, userId, from: accounts[0] });
+        const { signature, error } = await requestSignature(connector, { chainId, email, userId, from: accounts[0] });
         if (signature) {
           setWallet({ address: accounts[0], chainId, signature });
         }
@@ -108,7 +107,7 @@ export default function WalletConnectButton ({ email, userId, gateChainId, conne
       setWalletError('');
       // Get updated accounts and chainId
       const { accounts, chainId } = payload.params[0];
-      const { signature, error: _error } = await requestSignature(connector, { chainId: gateChainId, email, userId, from: accounts[0] });
+      const { signature, error: _error } = await requestSignature(connector, { chainId, email, userId, from: accounts[0] });
       if (signature) {
         setWallet({ address: accounts[0], chainId, signature });
       }
@@ -134,8 +133,8 @@ export default function WalletConnectButton ({ email, userId, gateChainId, conne
       .request({ method: 'eth_requestAccounts' })
       .then(async (accounts: string[]) => {
         closeModal();
-        const chainId = gateChainId || parseInt(metamask.provider.chainId, 16);
-        const { signature, error } = await requestSignature(metamask.provider, { chainId, email, userId, from: accounts[0] });
+        const chainIdToRequest = chainId || parseInt(metamask.provider.chainId, 16);
+        const { signature, error } = await requestSignature(metamask.provider, { chainId: chainIdToRequest, email, userId, from: accounts[0] });
         if (signature) {
           setWallet({
             address: accounts[0],
@@ -177,7 +176,6 @@ export default function WalletConnectButton ({ email, userId, gateChainId, conne
   }, []);
 
   useEffect(() => {
-    console.log('update wlalet state');
     setWalletError('');
   }, [walletState]);
 
@@ -273,7 +271,6 @@ async function requestSignature (provider: any, { from, email, chainId }: { from
   }
   catch (err) {
     if (err.code === -32603) {
-      console.log("CHAIN ID", chainId)
       return { error: `Please connect to the ${chainId ? getBlockChainName(chainId as ChainId) : 'Ethereum or xDai'} network` };
     }
     return { error: err.message || err };
