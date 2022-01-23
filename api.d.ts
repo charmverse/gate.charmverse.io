@@ -12,6 +12,7 @@ export type NotionGateLock = {
   lockType: LockType
   addressWhitelist: string[]
   tokenAddress?: string | null
+  tokenBlacklist: string[]
   tokenChainId?: number | null
   tokenName?: string | null
   tokenSymbol?: string | null

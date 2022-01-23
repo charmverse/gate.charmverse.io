@@ -148,7 +148,6 @@ export default function SettingsPage ({ gateSettings }: { gateSettings: NotionGa
 
   function addLock (lockType: LockType) {
     setActiveForm('lock');
-    console.log('add', lockType)
     setActiveLock({ lockType });
   }
 
