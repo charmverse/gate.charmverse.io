@@ -63,15 +63,6 @@ interface User {
   address?: string;
 }
 
-
-const FORM_STEP_TITLES = {
-  0: 'Settings Home: Gate summary',
-  1: 'Settings 1/4: Set Notion domain',
-  2: 'Settings 2/4: Add CharmVerse admin',
-  3: 'Settings 3/4: Set Notion preferences',
-  4: 'Settings 4/4: Set token criteria'
-}
-
 export default function NotionLockForm ({ gateId, hasAdminAccess, lock, goBack: goBackParent, onSubmit }: { gateId: string, hasAdminAccess: boolean, lock: Partial<NotionGateLock>, goBack?: () => void, onSubmit: (lock: NotionGateLock) => void }) {
 
   const [form, setForm] = useFormState<Form>({
@@ -84,6 +75,7 @@ export default function NotionLockForm ({ gateId, hasAdminAccess, lock, goBack: 
     lockType: lock.lockType || 'ERC20',
     addressWhitelist: lock.addressWhitelist || [],
     tokenAddress: lock.tokenAddress,
+    tokenBlacklist: lock.tokenBlacklist || [],
     tokenChainId: lock.tokenChainId || 1,
     tokenName: lock.tokenName,
     tokenSymbol: lock.tokenSymbol,
@@ -113,6 +105,7 @@ export default function NotionLockForm ({ gateId, hasAdminAccess, lock, goBack: 
       POAPEventId: form.POAPEventId,
       POAPEventName: form.POAPEventName,
       tokenAddress: form.tokenAddress,
+      tokenBlacklist: form.tokenBlacklist,
       tokenChainId: form.tokenChainId,
       tokenMin: form.tokenMin,
       tokenName: form.tokenName,
@@ -342,23 +335,25 @@ function NotionPreferencesForm ({ form, hasAdminAccess, goBack, onSubmit }: { fo
   </>);
 }
 
-type TokenFormFields = Pick<NotionGateLock, 'addressWhitelist' | 'POAPEventName' | 'POAPEventId' | 'tokenChainId' | 'tokenAddress' | 'tokenName' | 'tokenSymbol' | 'lockType' | 'tokenMin'>;
+type TokenFormFields = Pick<NotionGateLock, 'addressWhitelist' | 'POAPEventName' | 'POAPEventId' | 'tokenChainId' | 'tokenAddress' | 'tokenBlacklist' | 'tokenName' | 'tokenSymbol' | 'lockType' | 'tokenMin'>;
 
 function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack?: () => void, onSubmit: (form: TokenFormFields) => void }) {
 
   const [isValidContract, setIsValidContract] = useLoadingState<{ loading: boolean, valid: boolean }>({ loading: false, valid: false });
-  const [values, setValues] = useFormState<Form>({
+  const [values, setValues] = useFormState<Form & { tokenBlacklistStr: string }>({
     tokenName: '',
     tokenSymbol: '',
     tokenChainId: 1,
     tokenMin: 1,
     lockType: 'ERC20',
-    ...form
+    ...form,
+    tokenBlacklistStr: form.tokenBlacklist.join('\n'),
   });
 
   function submitForm () {
     onSubmit({
       ...values,
+      tokenBlacklist: values.tokenBlacklistStr.split(/(\s+)/).filter(s => s.trim().length > 0),
       // @ts-ignore cast string value to number
       tokenChainId: parseInt(values.tokenChainId, 10),
       tokenMin: typeof values.tokenMin === 'string' ? parseInt(values.tokenMin, 10) : values.tokenMin
@@ -476,6 +471,18 @@ function TokenForm ({ form, goBack, onSubmit }: { form: Form, goBack?: () => voi
               type: 'number',
               placeholder: '1'
             }}
+          />
+        </>)}
+        {(values.lockType === 'ERC721') && (<>
+          <br /><br />
+          <FormLabel>Token id blacklist</FormLabel>
+          <TextField
+            fullWidth
+            multiline
+            name='tokenBlacklistStr'
+            onChange={updateValues}
+            value={values.tokenBlacklistStr}
+            size='small'
           />
         </>)}
       </>)}
