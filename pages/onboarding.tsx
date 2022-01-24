@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Divider from '@mui/material/Divider';
@@ -12,6 +12,7 @@ import NotionLockForm from '../components/common/NotionLockForm';
 import { Typography } from '@mui/material';
 import { NotionGateSettings, LockType } from '../api';
 import { LOCK_TYPES } from '../lib/blockchain/config';
+import { GET } from '../lib/http/browser';
 
 export default function OnboardingFlow () {
 
@@ -20,23 +21,15 @@ export default function OnboardingFlow () {
   const [step, setStep] = useState(1);
   const router = useRouter();
 
-  function createGate (gate: NotionGateSettings) {
-    setGate(gate);
-    setStep(2);
-  }
-
-  function goBack () {
-    setStep(step - 1);
-  }
-
-  function selectLockType (lockType: LockType) {
-    setStep(3);
-    setLockType(lockType);
-  }
-
   function createLock () {
     router.push('/settings');
   }
+
+  useEffect(() => {
+    GET('/track/page_view', {
+      title: 'Create a Notion gate'
+    });
+  }, []);
 
   return (
     <Page title={'Notion Token Gate'}>

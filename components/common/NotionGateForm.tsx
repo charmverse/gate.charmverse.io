@@ -48,15 +48,6 @@ export default function NotionGateForm ({ gate, onSubmit }: { gate?: NotionGateS
     step: 1
   });
 
-  // useEffect(() => {
-  //   if (form.step !== -1) {
-  //     GET('/track/page_view', {
-  //       title: FORM_STEP_TITLES[form.step]
-  //     });
-  //   }
-  // }, [form.step]);
-
-
   function goBack () {
     setForm({ step: 1 });
   }
