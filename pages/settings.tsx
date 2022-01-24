@@ -91,13 +91,11 @@ export default function SettingsPage ({ gateSettings }: { gateSettings: NotionGa
     }
   }, [gate.spaceId]);
 
-  // useEffect(() => {
-  //   if (form.step !== -1) {
-  //     GET('/track/page_view', {
-  //       title: FORM_STEP_TITLES[form.step]
-  //     });
-  //   }
-  // }, [form.step]);
+  useEffect(() => {
+    GET('/track/page_view', {
+      title: 'Settings Page'
+    });
+  }, []);
 
 
   function editGateSettings () {

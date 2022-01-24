@@ -85,14 +85,6 @@ export default function NotionLockForm ({ gateId, hasAdminAccess, lock, goBack: 
     step: 1
   });
 
-  // useEffect(() => {
-  //   if (form.step !== -1) {
-  //     GET('/track/page_view', {
-  //       title: FORM_STEP_TITLES[form.step]
-  //     });
-  //   }
-  // }, [form.step]);
-
 
   function saveNotionForm (_form: NotionFormFields) {
     setForm({ ..._form, saving: true });
