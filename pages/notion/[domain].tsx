@@ -79,6 +79,7 @@ export default function TokenGate ({ gate }: { gate: any }) {
   const [activeLock, setActiveLock] = useState<NotionGateLock>(gate.locks[0]);
   const emailFromCookie = getCookie(EMAIL_COOKIE);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [accountAddress, setAccountAddress] = useState<string | null>(null);
   const [accountChainId, setAccountChainId] = useState<number | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
@@ -144,6 +145,7 @@ export default function TokenGate ({ gate }: { gate: any }) {
   }
 
   function saveConnection () {
+    setSaveError('');
     if (emailState.notionUserId) {
       setSaving(true);
       POST('/notion/connect', {
@@ -161,6 +163,7 @@ export default function TokenGate ({ gate }: { gate: any }) {
       })
       .catch(err => {
         console.error('Error connecting wallet to Notion:', err);
+        setSaveError(err.message || 'Something went wrong. Please try again later');
         setSaving(false);
       });
     }
@@ -168,7 +171,6 @@ export default function TokenGate ({ gate }: { gate: any }) {
 
   function onSelectLock (lock: NotionGateLock) {
     setActiveLock(lock);
-    console.log('set active', lock);
   }
 
   const allowSelectCriteria = !!(gate.locks.length > 1);
@@ -256,7 +258,7 @@ export default function TokenGate ({ gate }: { gate: any }) {
             <Divider />
 
             <CardContent sx={{ p: 2 }}>
-              <Box display='flex' justifyContent='center' alignItems='center'>
+              <Box display='flex' justifyContent='center' alignItems='center' flexDirection='column'>
                 {walletState.connected
                   ? (
                     <Button
@@ -274,6 +276,7 @@ export default function TokenGate ({ gate }: { gate: any }) {
                     </PrimaryButton>
                   )
                 }
+                {saveError && <Typography variant='body2' color='error' sx={{ fontSize: 12, mt: 2 }}>{saveError}</Typography>}
               </Box>
             </CardContent>
           </>}
