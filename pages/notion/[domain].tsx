@@ -160,6 +160,7 @@ export default function TokenGate ({ gate }: { gate: any }) {
         window.location.href = notionLandingPage;
       })
       .catch(err => {
+        console.error('Error connecting wallet to Notion:', err);
         setSaving(false);
       });
     }
