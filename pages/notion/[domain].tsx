@@ -25,7 +25,7 @@ import { getCookie, setCookie } from '../../lib/browser';
 
 import TokenAccessCriteria from '../../components/TokenAccessCriteria';
 import { blueColor } from '../../theme/colors';
-import { NotionGateLock } from '../../api';
+import { NotionGateSettingsWithLocks, NotionGateLock } from '../../api';
 import { GetServerSidePropsContext } from 'next';
 
 const Logo = styled.img`
@@ -48,25 +48,14 @@ const LockContainer = styled.div`
 
 const EMAIL_COOKIE = 'notion_email';
 
-interface Gate {
-  spaceDomain: string;
-  spaceName: string;
-  spaceIcon?: string;
-  spaceDefaultUrl?: string;
-  locks: Pick<NotionGateLock, 'POAPEventName' | 'tokenChainId' | 'tokenAddress' | 'lockType' | 'tokenMin' | 'tokenName' | 'tokenSymbol'>[];
-}
-
 export const getServerSideProps = async (ctx: GetServerSidePropsContext) => {
-  console.log(ctx.req.url);
   const domain = ctx.req.url.split('/').pop();
-  console.log('domain', domain)
   const { gate } = await serverGET(process.env.NEXT_PUBLIC_API + `/gate`, { domain });
   if (!gate) {
     return {
       notFound: true
     };
   }
-  console.log('gate', gate);
   return {
     props: {
       gate
@@ -74,7 +63,7 @@ export const getServerSideProps = async (ctx: GetServerSidePropsContext) => {
   };
 };
 
-export default function TokenGate ({ gate }: { gate: any }) {
+export default function TokenGate ({ gate }: { gate: NotionGateSettingsWithLocks }) {
 
   const [activeLock, setActiveLock] = useState<NotionGateLock>(gate.locks[0]);
   const emailFromCookie = getCookie(EMAIL_COOKIE);
@@ -173,7 +162,7 @@ export default function TokenGate ({ gate }: { gate: any }) {
   const allowSelectCriteria = !!(gate.locks.length > 1);
 
   const workspaceUrl = `https://notion.so/${spaceDomain}`;
-  const notionLandingPage = gate.spaceDefaultUrl || workspaceUrl;
+  const notionLandingPage = activeLock.spaceDefaultUrl || workspaceUrl;
 
   return (
     <>
