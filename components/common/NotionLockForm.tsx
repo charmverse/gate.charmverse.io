@@ -1,40 +1,30 @@
 
 import styled from '@emotion/styled';
 import { useEffect, useState } from 'react';
-import { CopyToClipboard } from 'react-copy-to-clipboard';
 import Typography from '@mui/material/Typography';
-import { buttonUnstyledClasses, Card, CardContent, CircularProgress, Divider, FormControlLabel, FormHelperText, FormLabel, Grid, IconButton, Radio, RadioGroup, SelectChangeEvent } from '@mui/material';
-import Box from '@mui/material/Box';
-import DeleteIcon from '@mui/icons-material/Delete';
-import CopyIcon from '@mui/icons-material/ContentCopy';
-import Link from '@mui/material/Link';
-import Tooltip from '@mui/material/Tooltip';
+import { buttonUnstyledClasses, CardContent, Divider, FormHelperText, FormLabel, SelectChangeEvent } from '@mui/material';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import ToggleButton from '@mui/material/ToggleButton';
 import TextField from '@mui/material/TextField';
-import Chip from '@mui/material/Chip';
 import FormControl from '@mui/material/FormControl';
+import Box from '@mui/material/Box';
 import TabsUnstyled from '@mui/base/TabsUnstyled';
 import TabsListUnstyled from '@mui/base/TabsListUnstyled';
 import TabUnstyled, { tabUnstyledClasses } from '@mui/base/TabUnstyled';
 import TabPanelUnstyled from '@mui/base/TabPanelUnstyled';
-import Avatar from '@mui/material/Avatar';
 import Alert from '@mui/material/Alert';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import InputAdornment from '@mui/material/InputAdornment';
-import EditIcon from '@mui/icons-material/Edit';
 import { useFormState, useLoadingState } from '../../lib/react';
 import { POST, GET, DELETE, PUT } from '../../lib/http/browser';
-import Page, { PageSection } from '../../layouts/Page';
 import { SUPPORTED_BLOCKCHAINS } from '../../lib/blockchain';
 import debounce from '../../lib/debounce';
 import Button from '../Button';
-import NotionSpaceIcon from '../NotionSpaceIcon';
-import TrimmedContent from '../TrimmedContent';
 import PrimaryButton from '../PrimaryButton';
-import TokenAccessCriteria from '../TokenAccessCriteria';
 import InputLoadingIcon from '../InputLoadingIcon';
 import POAPSelect from '../POAPSelect';
-import { LockType, NotionGateLock } from '../../api';
+import { NotionGateLock } from '../../api';
 
 
 const lockTypes = [
@@ -71,6 +61,7 @@ export default function NotionLockForm ({ gateId, hasAdminAccess, lock, goBack: 
     spaceBlockIds: lock.spaceBlockIds || [],
     spaceBlockUrls: lock.spaceBlockUrls || [],
     spaceDefaultUrl: lock.spaceDefaultUrl,
+    spaceUserRole: lock.spaceUserRole,
     // requirements
     lockType: lock.lockType || 'ERC20',
     addressWhitelist: lock.addressWhitelist || [],
@@ -92,6 +83,7 @@ export default function NotionLockForm ({ gateId, hasAdminAccess, lock, goBack: 
       spaceBlockIds: _form.spaceBlockIds,
       spaceBlockUrls: _form.spaceBlockUrls,
       spaceDefaultUrl: _form.spaceDefaultUrl,
+      spaceUserRole: _form.spaceUserRole,
       lockType: form.lockType,
       addressWhitelist: form.addressWhitelist,
       POAPEventId: form.POAPEventId,
@@ -196,12 +188,13 @@ const TabsList = styled(TabsListUnstyled)`
 
 
 
-type NotionFormFields = Pick<NotionGateLock, 'spaceBlockIds' | 'spaceBlockUrls' | 'spaceDefaultUrl'>;
+type NotionFormFields = Pick<NotionGateLock, 'spaceBlockIds' | 'spaceBlockUrls' | 'spaceDefaultUrl' | 'spaceUserRole'>;
 
 function NotionPreferencesForm ({ form, hasAdminAccess, goBack, onSubmit }: { form: NotionGateLock, hasAdminAccess: boolean, goBack?: () => void, onSubmit: (form: NotionFormFields) => void }) {
 
   const [spaceBlockIds, setSpaceBlockIds] = useState(form.spaceBlockIds);
   const [spaceBlockUrls, setSpaceBlockUrls] = useState<string>(form.spaceBlockUrls?.join('\n') || '');
+  const [userRole, setUserRole] = useState(form.spaceUserRole || 'read_and_write');
   const [defaultUrl, setDefaultUrl] = useState(form.spaceDefaultUrl);
   const [memberType, setMemberType] = useState((form.spaceBlockIds.length > 0 || !hasAdminAccess) ? 1 : 0);
 
@@ -211,12 +204,18 @@ function NotionPreferencesForm ({ form, hasAdminAccess, goBack, onSubmit }: { fo
     onSubmit({
       spaceBlockIds: memberType === 1 ? spaceBlockIds : [],
       spaceBlockUrls: memberType === 1 ? spaceBlockUrls.split(/(\s+)/).filter(s => s.trim().length > 0) : [],
-      spaceDefaultUrl: defaultUrl
+      spaceDefaultUrl: defaultUrl,
+      spaceUserRole: memberType === 1 ? userRole : null
     });
   }
 
   function changeMemberType (e: any, newValue: string | number) {
     setMemberType(newValue as number);
+  }
+
+  function changeUserRole (e: any, newValue: string) {
+    console.log('new value', newValue);
+    setUserRole(newValue as NotionGateLock['spaceUserRole']);
   }
 
   function changeBlockIds (e: SelectChangeEvent<string[]>) {
@@ -266,6 +265,20 @@ function NotionPreferencesForm ({ form, hasAdminAccess, goBack, onSubmit }: { fo
           </TabsList>
         )}
         <TabPanelUnstyled value={1}>
+
+          <Box display='flex' alignItems='center' justifyContent='space-between'>
+            <FormLabel component='legend'>Editor access</FormLabel>
+            <ToggleButtonGroup
+              size='small'
+              value={userRole}
+              exclusive
+              onChange={changeUserRole}
+            >
+              <ToggleButton sx={{ px: 2 }} value='read_and_write'>Can edit</ToggleButton>
+              <ToggleButton sx={{ px: 2 }} value='reader'>View only</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+          <br />
 
           <FormLabel component='legend'>Accessible Pages</FormLabel>
 
