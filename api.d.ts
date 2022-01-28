@@ -1,6 +1,7 @@
 // interfaces served by api.charmverse.io
 
 export type LockType = 'ERC20' | 'ERC721' | 'POAP' | 'whitelist';
+type UserRole = 'editor' | 'read_and_write' | 'comment_only' | 'reader';
 
 export type NotionGateLock = {
   id: string
@@ -8,6 +9,7 @@ export type NotionGateLock = {
   spaceBlockIds: string[]
   spaceBlockUrls: string[]
   spaceDefaultUrl: string | null
+  spaceUserRole: UserRole | null
   // requirements
   lockType: LockType
   addressWhitelist: string[]
