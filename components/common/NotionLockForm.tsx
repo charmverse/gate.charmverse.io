@@ -267,7 +267,7 @@ function NotionPreferencesForm ({ form, hasAdminAccess, goBack, onSubmit }: { fo
         <TabPanelUnstyled value={1}>
 
           <Box display='flex' alignItems='center' justifyContent='space-between'>
-            <FormLabel component='legend'>Editor access</FormLabel>
+            <FormLabel component='legend'>Editor Access</FormLabel>
             <ToggleButtonGroup
               size='small'
               value={userRole}
