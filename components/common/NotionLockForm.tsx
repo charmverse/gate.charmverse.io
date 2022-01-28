@@ -274,8 +274,8 @@ function NotionPreferencesForm ({ form, hasAdminAccess, goBack, onSubmit }: { fo
               exclusive
               onChange={changeUserRole}
             >
-              <ToggleButton sx={{ px: 2 }} value='read_and_write'>Can edit</ToggleButton>
-              <ToggleButton sx={{ px: 2 }} value='reader'>View only</ToggleButton>
+              <ToggleButton disableRipple sx={{ px: 2 }} value='read_and_write'>Can edit</ToggleButton>
+              <ToggleButton disableRipple sx={{ px: 2 }} value='reader'>View only</ToggleButton>
             </ToggleButtonGroup>
           </Box>
           <br />
